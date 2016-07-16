@@ -7,6 +7,9 @@
 #include "err_code.h"
 #include "system_var.h"
 #include <memory.h>
+#include "crc.h"
+
+#include "sql.h"
 
 extern UINT8_T ucHeap[2048];
 extern UINT8_T ucHeap1[2048];
@@ -36,9 +39,17 @@ void ApplicationSectorСlosingHook( void )
 }
 
 
-//CREATE DATABASE [IF NOT EXISTS] db_name
+
 
 //разработать функции конвертации чисел в массив и обратно
+void ApplicationSqlLockHook()
+{
+}
+
+void ApplicationSqlUnlockHook()
+{
+}
+
 
 int _tmain(int argc, _TCHAR* argv[])
 {
@@ -61,6 +72,17 @@ int _tmain(int argc, _TCHAR* argv[])
 	config.SectorSizeLen=BYTES_2;
 	sector_ConfigCheck(&config);
 	sector_Insert(&config);
+
+
+	CREATE DATABASE 0,(UINT8_T*)"test" END;
+	CREATE DATABASE 0,NULL END;
+
+	//SELECT  ??
+	//FROM
+	//WHERE
+
+
+	return 0;
 
 	sector_GetSectorConfig(0,&config);
 
