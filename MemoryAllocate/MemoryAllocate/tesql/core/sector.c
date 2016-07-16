@@ -267,7 +267,11 @@ UINT8_T sector_GetSectorConfig(UINT8_T index, SectorConfig* config)
 /*-----------------------------------------------------------*/
 UINT8_T sector_Insert(SectorConfig* config)
 {
+	UINT32_T addr;
 	UINT16_T size;
+	UINT16_T crc;
+	UINT8_T	 err;
+	UINT8_T  *buf=NULL;
 
 	if(sl!=NULL)
 	{
@@ -322,11 +326,51 @@ UINT8_T sector_Insert(SectorConfig* config)
 			}
 		}
 
+		err=sector_Init(config->index);
+
 		//создать нулевой сегмент
+		if(err==ERR_OK)
+		{
+			if((config->type & SECTOR_START)>0)
+			{
+				
+				//размер с учетом выравнивания
+				size=config->StartAddrLen;
+				if((config->type & SECTOR_CRC)>0)
+					size+=sizeof(UINT16_T);
+
+				size+=( config->ByteAligment-1);
+				size&=~(config->ByteAligment-1);
+
+				err=sector_Malloc(config->index,&addr,size);
+
+				if(err!=ERR_OK)
+					return err;
+
+				buf=(UINT8_T*)local_malloc(size);
+				
+				if(buf==NULL)
+					return ERR_LOCAL_MALLOC;
+
+				//инициализируем
+				memset((void*)buf,0x00,size);
+
+				if((config->type & SECTOR_CRC)>0)
+				{
+					Crc16_Clear();
+					crc=Crc16(buf,config->StartAddrLen);
+					memcpy((void*)(buf+config->StartAddrLen),(void*)&crc,sizeof(UINT16_T));
+				}
+
+				err=sector_write(config->index, addr, (void*)buf, size);
+
+				local_free(buf);
+			}
+		}
 
 		//если сектор SECTOR_MAIN и SECTOR_START, то инициализируем.
 		//если сектор обычный, то инициализируем
-		return sector_Init(config->index);
+		return err;
 	}
 	return ERR_SL_NULL;
 }
