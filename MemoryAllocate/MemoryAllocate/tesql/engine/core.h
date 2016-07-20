@@ -1,6 +1,10 @@
 #ifndef _CORE_H
 #define _CORE_H
 
+#ifdef  __cplusplus
+extern "C" {
+#endif
+
 #include "portable.h"
 
 //db_create		создание бд
@@ -10,6 +14,12 @@
 
 //ошибка возвращается через хук
 
-void db_create(UINT8_T index, UINT8_T* name);
+void db_set_mode(UINT8_T mode);
+
+void db_create(void *arg,...);
+
+#ifdef  __cplusplus
+}
+#endif
 
 #endif

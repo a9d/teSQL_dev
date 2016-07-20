@@ -8,7 +8,7 @@ UINT8_T ucHeap[2000];
 UINT8_T ucHeap1[2000];
 
 /*-----------------------------------------------------------*/
-UINT8_T sector_write(UINT8_T sector, UINT32_T addr, void *data, UINT16_T size)
+UINT8_T local_write(UINT8_T sector, UINT32_T addr, void *data, UINT16_T size)
 {
 	UINT16_T i;
 
@@ -31,7 +31,7 @@ UINT8_T sector_write(UINT8_T sector, UINT32_T addr, void *data, UINT16_T size)
 }
 
 /*-----------------------------------------------------------*/
-UINT8_T sector_read(UINT8_T sector, UINT32_T addr, void *data, UINT16_T size)
+UINT8_T local_read(UINT8_T sector, UINT32_T addr, void *data, UINT16_T size)
 {
 	UINT16_T i;
 
@@ -55,7 +55,7 @@ UINT8_T sector_read(UINT8_T sector, UINT32_T addr, void *data, UINT16_T size)
 
 
 /*-----------------------------------------------------------*/
-void *local_malloc(size_t size)
+void *local_malloc(SIZE_T size)
 {
 	return malloc(size);
 }

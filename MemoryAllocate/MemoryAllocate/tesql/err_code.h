@@ -28,7 +28,7 @@ extern "C" {
 #define ERR_SECTOR_FREE			((UINT8_T)18)
 #define ERR_SL_NULL				((UINT8_T)19)
 #define ERR_NO_MAIN				((UINT8_T)20)
-
+#define ERR_SQL_DB_ADDR			((UINT8_T)21)
 
 #ifdef  __cplusplus
 }

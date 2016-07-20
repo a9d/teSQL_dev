@@ -34,6 +34,19 @@ UINT8_T		sector_Delete(UINT8_T index);											//освободить заданный сектор
 UINT8_T		sector_AddNewSector(SectorConfig* config);								//добавление нового сектора
 UINT8_T		sector_Open(UINT32_T addr,UINT8_T aligment);							//открыть сектор main . Подготовить все сектора к работе
 
+UINT32_T	sector_GetZeroSeg();										//вернуть адрес первого сегмента сектора 
+
+UINT8_T		sector_GetStartIndex();													//вернуть индекс сектора Start
+
+void		*s_malloc(UINT8_T index,SIZE_T *size);
+void		s_free(void *block);
+UINT32_T	sector_aligment(UINT8_T aligment,UINT32_T size);
+
+UINT8_T		sector_GetSegmentSize(UINT8_T index, UINT32_T addr, UINT32_T *size);
+
+//sector_read  - чтение сегмента с проверкой CRC
+//sector_write - запись сегмента с генерированием CRC
+
 #ifdef  __cplusplus
 }
 #endif

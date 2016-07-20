@@ -5,6 +5,9 @@
 typedef unsigned __int8		UINT8_T;
 typedef unsigned __int16    UINT16_T;
 typedef unsigned __int32	UINT32_T;
+typedef	unsigned char		UCHAR;
+typedef char				CHAR;
+typedef	unsigned __int32	SIZE_T;
 
 /* Define NULL pointer value */
 #ifndef NULL

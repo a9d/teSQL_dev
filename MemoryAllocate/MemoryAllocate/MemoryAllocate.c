@@ -11,6 +11,12 @@
 
 #include "sql.h"
 
+
+#include <stdio.h>
+#include <stdarg.h>
+#include <math.h>
+#include <string.h>
+
 extern UINT8_T ucHeap[2048];
 extern UINT8_T ucHeap1[2048];
 
@@ -51,6 +57,18 @@ void ApplicationSqlUnlockHook()
 }
 
 
+void ApplicationSqlErr(UINT8_T err)
+{
+}
+
+
+//добавить функцию маллок с учетом выравнивани€ и функции read write с учетом выравнивани€
+//функцию корректироваки размера
+
+
+//добавить функцию получени€ нулевого адреса
+//добавить фунцию высокоуровнего чтени€/записи
+
 int _tmain(int argc, _TCHAR* argv[])
 {
 	int i;
@@ -60,7 +78,12 @@ int _tmain(int argc, _TCHAR* argv[])
 	UINT32_T addr1,addr2,addr3,addr4,addr5;
 	UINT8_T buf[]={1,2,3,4,5,6};
 	UINT32_T addr11;
+	UINT8_T y;
 
+	UINT16_T db_name;
+
+
+	//попробовать реализовать перегрузку использу€ функцию с неизвестным колличеством параметров
 	sector_Create(1,2);
 
     config.index=0;
@@ -74,78 +97,89 @@ int _tmain(int argc, _TCHAR* argv[])
 	sector_Insert(&config);
 
 
-	CREATE DATABASE 0,(UINT8_T*)"test" END;
-	CREATE DATABASE 0,NULL END;
+	CREATE DATABASE &db_name,(UINT8_T*)"test" END;
+	CREATE DATABASE &db_name END;
+	//CREATE and DROP устанавливают тип функции
 
-	//SELECT  ??
-	//FROM
-	//WHERE
+	//CREATE DATABASE END;
+	//DROP DATABASE END;
+	
+	
+	//DROP TABLE
+	//ALTER TABLE
+	//CREATE TABLE
 
+	//UPDATE
+	//DELETE
+	//INSERT INTO 
+	//SELECT FROM WHERE
+	
 
-	return 0;
-
-	sector_GetSectorConfig(0,&config);
-
-	sector_Malloc(0,&addr1,6);
-	sector_write(0,addr1,(void*)buf,6);
-
-	sector_Malloc(0,&addr2,6);
-	sector_write(0,addr2,(void*)buf,6);
-
-	sector_Malloc(0,&addr3,6);
-	sector_write(0,addr3,(void*)buf,6);
-
-	sector_Malloc(0,&addr4,6);
-	sector_write(0,addr4,(void*)buf,6);
-
-	sector_Malloc(0,&addr5,6);
-	sector_write(0,addr5,(void*)buf,6);
-
-	sector_Free(0,addr1);
-	sector_Free(0,addr3);
-	sector_Free(0,addr2);
-	sector_Free(0,addr4);
-	sector_Free(0,addr5);
-
-	sector_Close();
-
-	sector_Open(0,2);
-
-	sector_Malloc(0,&addr1,6);
-	sector_write(0,addr1,(void*)buf,6);
-
-	sector_Close();
 
 	return 0;
 
-	sector_Create(2,2);
-
-	config.index=0;
-	config.type=(SECTOR_MAIN|SECTOR_START|SECTOR_FLASH);
-	config.ByteAligment=2;
-	config.StartAddr=0;
-	config.StartAddrLen=BYTES_2;
-	config.SectorSize=2000;
-	config.SectorSizeLen=BYTES_2;
-
-	sector_ConfigCheck(&config);	
-	sector_Insert(&config);
 	//sector_GetSectorConfig(0,&config);
 
-	//
-	config.index=1;
-	config.type=(SECTOR_EEPROM);
-	config.ByteAligment=1;
-	config.StartAddr=0;
-	config.StartAddrLen=BYTES_4;
-	config.SectorSize=2000;
-	config.SectorSizeLen=BYTES_4;
+	//sector_Malloc(0,&addr1,6);
+	//sector_write(0,addr1,(void*)buf,6);
 
-	sector_ConfigCheck(&config);
-	sector_Insert(&config);
-	//sector_GetSectorConfig(1,&config);
+	//sector_Malloc(0,&addr2,6);
+	//sector_write(0,addr2,(void*)buf,6);
 
-	sector_Malloc(0,&addr1,6);
+	//sector_Malloc(0,&addr3,6);
+	//sector_write(0,addr3,(void*)buf,6);
+
+	//sector_Malloc(0,&addr4,6);
+	//sector_write(0,addr4,(void*)buf,6);
+
+	//sector_Malloc(0,&addr5,6);
+	//sector_write(0,addr5,(void*)buf,6);
+
+	//sector_Free(0,addr1);
+	//sector_Free(0,addr3);
+	//sector_Free(0,addr2);
+	//sector_Free(0,addr4);
+	//sector_Free(0,addr5);
+
+	//sector_Close();
+
+	//sector_Open(0,2);
+
+	//sector_Malloc(0,&addr1,6);
+	//sector_write(0,addr1,(void*)buf,6);
+
+	//sector_Close();
+
+	//return 0;
+
+	//sector_Create(2,2);
+
+	//config.index=0;
+	//config.type=(SECTOR_MAIN|SECTOR_START|SECTOR_FLASH);
+	//config.ByteAligment=2;
+	//config.StartAddr=0;
+	//config.StartAddrLen=BYTES_2;
+	//config.SectorSize=2000;
+	//config.SectorSizeLen=BYTES_2;
+
+	//sector_ConfigCheck(&config);	
+	//sector_Insert(&config);
+	////sector_GetSectorConfig(0,&config);
+
+	////
+	//config.index=1;
+	//config.type=(SECTOR_EEPROM);
+	//config.ByteAligment=1;
+	//config.StartAddr=0;
+	//config.StartAddrLen=BYTES_4;
+	//config.SectorSize=2000;
+	//config.SectorSizeLen=BYTES_4;
+
+	//sector_ConfigCheck(&config);
+	//sector_Insert(&config);
+	////sector_GetSectorConfig(1,&config);
+
+	//sector_Malloc(0,&addr1,6);
 	//sector_write(0,addr1,(void*)buf,6);
 
 	//sector_Malloc(1,&addr11,6);

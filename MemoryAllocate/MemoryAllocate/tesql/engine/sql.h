@@ -6,6 +6,8 @@
 
 //CREATE DATABASE [IF NOT EXISTS] db_name
 
+#define DB_NEW	0
+
 extern void ApplicationSqlLockHook();
 extern void ApplicationSqlUnlockHook();
 
@@ -14,13 +16,11 @@ extern void ApplicationSqlUnlockHook();
 //#define DATABASE(__INDEX,__NAME)	db_create(__INDEX, __NAME);
 //#define END			ApplicationSqlUnlockHook();
 
-#define ST (
-#define DG )
+#define CREATE		ApplicationSqlLockHook();db_set_mode(1);
+#define DROPE		ApplicationSqlLockHook();db_set_mode(0);
 
-#define CREATE		ApplicationSqlLockHook();
-//void db_create(UINT8_T index, UINT8_T* name);
 #define DATABASE	db_create(
-#define END			); ApplicationSqlUnlockHook();
+#define END			,NULL); ApplicationSqlUnlockHook();
 
 
 #endif
