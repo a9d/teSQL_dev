@@ -82,6 +82,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	UINT16_T db_name;
 
+	UINT8_T len=strlen("test");
 
 	//попробовать реализовать перегрузку использу€ функцию с неизвестным колличеством параметров
 	sector_Create(1,2);

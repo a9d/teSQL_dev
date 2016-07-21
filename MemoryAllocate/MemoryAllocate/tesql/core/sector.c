@@ -355,7 +355,7 @@ UINT8_T sector_Insert(SectorConfig* config)
 				start_index=config->index;
 
 				//размер с учетом выравнивания
-				size=config->StartAddrLen;
+				size=config->StartAddrLen*2; //указатель на следующую и предыдущую запись
 				if((config->type & SECTOR_CRC)>0)
 					size+=sizeof(UINT16_T);
 
@@ -1024,7 +1024,7 @@ UINT8_T sector_Open(UINT32_T addr,UINT8_T aligment)
 	return err;
 }
 
-void *s_malloc(UINT8_T index,SIZE_T *size)
+void *sector_RamMalloc(UINT8_T index,SIZE_T *size)
 {
 	//если требуется добавить CRC
 	if((sl->sector[index].Type & SECTOR_CRC)>0)
@@ -1037,7 +1037,7 @@ void *s_malloc(UINT8_T index,SIZE_T *size)
 	return local_malloc(*size);
 }
 
-void s_free(void *block)
+void sector_RamFree(void *block)
 {
 	local_free(block);
 }
@@ -1090,4 +1090,64 @@ UINT8_T	sector_GetSegmentSize(UINT8_T index, UINT32_T addr, UINT32_T *size)
 
 	//очистить бит занятости 
 	return err;
+}
+
+UINT8_T	sector_GetAddrLen(UINT8_T index)
+{
+	return sl->sector[index].StartAddrLen;
+}
+
+UINT8_T sector_GetSizeLen(UINT8_T index)
+{
+	return sl->sector[index].SectorSizeLen;
+}
+
+
+UINT8_T sector_read(UINT8_T index, UINT32_T addr, void *data, UINT16_T size)
+{
+	UINT16_T crc;
+	UINT8_T err=ERR_OK;
+
+	err=local_read(index,addr,data,size);
+
+	//чтение с проверкой CRC
+	if(err==ERR_OK)
+	{
+		if((sl->sector[index].Type & SECTOR_CRC)>0)
+		{
+			Crc16_Clear();
+			crc=Crc16((UINT8_T*)data,size-sizeof(UINT16_T));
+
+			err=memcmp((void*)((UINT8_T*)data+size-sizeof(UINT16_T)),(void*)&crc,sizeof(UINT16_T));
+			if(err!=0x00)
+			{
+				err=ERR_CRC;
+			}
+		}
+	}
+
+	return err;
+}
+
+UINT8_T sector_write(UINT8_T index, UINT32_T addr, void *data, UINT16_T size)
+{
+	UINT16_T crc;
+
+	if((sl->sector[index].Type & SECTOR_CRC)>0)
+	{
+		Crc16_Clear();
+		crc=Crc16((UINT8_T*)data, size-sizeof(UINT16_T));
+		memcpy((void*)((UINT8_T*)data+size-sizeof(UINT16_T)),(void*)&crc,sizeof(UINT16_T));
+	}
+
+	//запись с генерированием CRC
+	return local_write(index,addr,data,size);
+}
+
+UINT8_T		sector_GetCrcSize(UINT8_T index)
+{
+	if((sl->sector[index].Type & SECTOR_CRC)>0)
+		return sizeof(UINT16_T);
+	else
+		return 0;
 }

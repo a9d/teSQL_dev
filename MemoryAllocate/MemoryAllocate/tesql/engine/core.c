@@ -15,6 +15,8 @@ UINT8_T mode_create;
 
 extern void ApplicationSqlErr(UINT8_T err);
 
+
+
 		//номер БД(это адрес БД)
 		//-указатель на имя БД - допустимо NULL
 		//-указатель на список таблиц - NULL если список еще не создан
@@ -24,11 +26,21 @@ extern void ApplicationSqlErr(UINT8_T err);
 //список секторов
 typedef struct DB_HEADER
 {
+	UINT32_T	next;   //адрес следующей записи
+	UINT32_T	prev;	//адрес предыдущей записи
+}DB_Header;
+
+//список базданных
+typedef struct
+{
+	struct DB_HEADER header;
 	UINT32_T	name;       //указатель на имя БД
 	UINT32_T	tbl_list;	//указатель на список таблиц
-	UINT32_T	next;		//указатель на следующую БД
-}DbHeader;
+}DB_List;
 
+
+UINT8_T recor2db_header(UINT8_T index, DB_Header *header, UINT8_T *data);
+void recor2db_header_list(UINT8_T index, DB_List *list, UINT8_T i, UINT8_T *data);
 
 //0-drop
 //1-create
@@ -37,15 +49,52 @@ void db_set_mode(UINT8_T mode)
 	mode_create=mode;
 }
 
+//конвертировать массив в заголовок
+UINT8_T recor2db_header(UINT8_T index, DB_Header *header, UINT8_T *data)
+{
+	UINT8_T i;	 //текущая позиция в массиве
+	UINT8_T len; //длина поля
+
+	len=sector_GetAddrLen(index);
+
+	i=0;
+	memcpy(&header->next,data,len);
+	i+=len;
+	memcpy(&header->prev,data+i,len);
+	i+=len;
+
+	return i;
+}
+
+//конвертировать массив в тело
+void recor2db_header_list(UINT8_T index, DB_List *list, UINT8_T i, UINT8_T *data)
+{
+	UINT8_T len; //длина поля
+
+	len=sector_GetAddrLen(index);
+
+	memcpy(&list->name,data+i,len);
+	i+=len;
+	memcpy(&list->tbl_list,data+i,len);
+	i+=len;
+}
+
+
+
 void db_create(void *arg,...)
 {
 	void **p=&arg;
 
-	SectorConfig *cnf;
 	void *db_addr;
-	UINT32_T size;
-	UINT32_T addr;
-	UINT8_T err;
+
+	UINT32_T	size;
+	UINT32_T	addr;
+	UINT8_T		err;
+	UINT8_T		start_index;
+	UINT8_T		*buf=NULL;
+	DB_List		list;
+	UINT8_T		len;
+	UINT8_T		i;
 
 	//первый параметр это индекс базы данных
 	if(*p==NULL)
@@ -64,43 +113,23 @@ void db_create(void *arg,...)
 
 	if(mode_create==MODE_CREATE)
 	{
-		//cnf=(SectorConfig*)local_malloc(sizeof(SectorConfig));
-
-		//if(cnf!=NULL)
-		//{
-			//получить конфиг сектора старт
-			//sector_GetSectorConfig(sector_GetStartIndex(),cnf);
-			//memcpy((void*)&db_addr, *p, cnf->StartAddrLen);
-
+		//получить данные по сектору старт
+		start_index=sector_GetStartIndex();
 		addr=sector_GetZeroSeg();
-		err=sector_GetSegmentSize(sector_GetStartIndex(), addr, &size);
+		
+		err=db_record_load(start_index,addr,&buf, &size);
 
-		//написаит функцию прохода по всем сегментам бд
+		
+
+		local_free(buf);
+
 
 		if(*p!=NULL)
 		{
 			//если есть имя то провести поиск БД с подобным именем
 		}
 
-		//	local_free(cnf);
-		//}
-		//else
-		//{
-		//	ApplicationSqlErr(ERR_LOCAL_MALLOC);
-		//	return;
-		//}
 
-		//номер [имя]
-
-		//проверить сущетвование БД с подобным номером или именем
-
-		//создать если нет иначе вернуть ошибку
-
-		//номер БД(это адрес БД)
-		//-указатель на имя БД - допустимо NULL
-		//-указатель на список таблиц - NULL если список еще не создан
-		//-указатель на следующую БД
-		//-CRC если требуется
 	}
 	else
 	{
@@ -108,24 +137,27 @@ void db_create(void *arg,...)
 	}
 
 
+}
 
-	//если есть второй, то это имя БД
-	//if(*p!=NULL)
-	//{
-	//}
 
-	//	const UINT8_T **p=&name;
-	//UINT8_T len;
-	//UINT8_T	index;
+UINT8_T db_record_load(UINT8_T index,UINT32_T addr, UINT8_T **buf,UINT32_T *size)
+{
+	UINT8_T err;
 
-	////первый параметр UINT8
-	////второй, если есть, это строка
-	//if(*p!=NULL)
-	//	index=**p;
+	err=sector_GetSegmentSize(index, addr, size);
 
-	//p++;
+	if(err==ERR_OK)
+	{
+		*buf=(UINT8_T*)local_malloc(*size);
+		if(buf!=NULL)
+		{
+			err=sector_read(index,addr,*buf,*size);
+		}
+		else
+		{
+			err=ERR_LOCAL_MALLOC;
+		}
+	}
 
-	//if(*p!=NULL)
-	//	len=strlen((char*)*p);
-
+	return err;
 }
