@@ -40,7 +40,13 @@ UINT8_T db_record_prev( DB_Record *rec ); //предыдущую
 UINT8_T db_record_next( DB_Record *rec ); //следующую
 UINT8_T db_record_add( DB_Record *rec );  //добавить новую запись, всегда передается адрес стартового сегмента который содержит указатель на хвост
 UINT8_T db_record_del( DB_Record *rec );  //удалить указанную запись 
-//UINT8_T db_record_insert( DB_Record *rec );//вставить новую запись по указанному адресу, сместить список вниз
+
+
+//вернуть список всех БД
+
+//вернуть с указанным именем
+UINT8_T db_FindByName(void *db_link,UINT8_T *name);
+
 
 //решить проблему с буффером
 //UINT8_T db_record_load(UINT8_T index,UINT32_T addr, UINT8_T **buf,UINT32_T *size);

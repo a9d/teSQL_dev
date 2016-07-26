@@ -24,19 +24,19 @@ extern void ApplicationSqlErr(UINT8_T err);
 		//-CRC если требуетс€
 
 //список секторов
-typedef struct DB_HEADER
-{
-	UINT32_T	next;   //адрес следующей записи
-	UINT32_T	prev;	//адрес предыдущей записи
-}DB_Header;
-
-//список базданных
-typedef struct
-{
-	struct DB_HEADER header;
-	UINT32_T	name;       //указатель на им€ Ѕƒ
-	UINT32_T	tbl_list;	//указатель на список таблиц
-}DB_List;
+//typedef struct DB_HEADER
+//{
+//	UINT32_T	next;   //адрес следующей записи
+//	UINT32_T	prev;	//адрес предыдущей записи
+//}DB_Header;
+//
+////список базданных
+//typedef struct
+//{
+//	struct DB_HEADER header;
+//	UINT32_T	name;       //указатель на им€ Ѕƒ
+//	UINT32_T	tbl_list;	//указатель на список таблиц
+//}DB_List;
 
 
 
@@ -81,23 +81,143 @@ void db_set_mode(UINT8_T mode)
 //	i+=len;
 //}
 
+//массив всегда с crc
+//первые два байта длина массива
 
+UINT8_T db_FindByName(void *db_link,UINT8_T *name)
+{
+	UINT8_T err=ERR_OK;
+	UINT8_T next;
+	UINT8_T *name_check=NULL;
+	UINT32_T start_addr;
+	UINT32_T name_addr;
+	UINT32_T size;
+	DB_Record *rec=NULL;
+	//если нашли то в db_link не NULL
+
+	rec=(DB_Record*)local_malloc(sizeof(DB_Record));
+
+	if(rec!=NULL)
+	{
+		memset(rec,0x00,sizeof(DB_Record));
+
+		rec->index=sector_GetStartIndex(); 
+		rec->addrlen=sector_GetAddrLen(rec->index);
+		rec->addr_cur=sector_GetZeroSeg();
+		start_addr=rec->addr_cur;
+
+		//очистить db_link
+		memset(db_link, 0x00, rec->addrlen);
+
+		//пройтись по всем запис€м в цикле
+		err=db_record_cur( rec );
+
+		if(err!=ERR_OK)
+		{
+			local_free(rec);
+			return err;
+		}
+
+		local_free(rec->data);
+
+		if( (rec->addr_next==(UINT32_T)NULL) && (rec->addr_prev=(UINT32_T)NULL) )
+		{
+			//Ѕƒ отсуствует
+			next=FALSE;
+		}
+		else
+		{
+			next=TRUE;
+		}
+
+
+		//пройтись по всем запис€м
+		while(next)
+		{
+			err=db_record_next(rec);
+
+			if(err==ERR_OK)
+			{
+				//загрузить указатель на им€
+				name_addr=(UINT32_T)NULL;
+				memcpy(&name_addr,rec->data+rec->addrlen*2,rec->addrlen);
+
+				if(name_addr!=(UINT32_T)NULL)
+				{
+					//проверить им€
+
+					//размер сегмента
+					size=0;
+					err=sector_GetSegmentSize(rec->index,name_addr,&size);
+					if(err==ERR_OK)
+					{
+						//выделить место под массив
+						name_check=(UINT8_T*)local_malloc(size);
+						if(name_check!=NULL)
+						{
+							err=sector_read(rec->index,name_addr,name_check,size);
+							if(err==ERR_OK)
+							{
+								//загружаем длину строки
+								size=0;
+								memcpy(&size,name_check,sizeof(UINT16_T));
+
+								//сравниваем
+								if(memcmp(name, name_check+sizeof(UINT16_T), size)==0)
+								{
+									//если им€ совпало, то копируем адрес Ѕƒ
+									//иначе переходим к следующей Ѕƒ
+									memcpy(db_link,&rec->addr_cur,rec->addrlen);
+									next=FALSE;
+								}
+							}
+							else
+							{
+								next=FALSE;
+							}
+							local_free(name_check);
+						}
+						else
+						{
+							err=ERR_LOCAL_MALLOC;
+							next=FALSE;
+						}
+					}
+					else
+					{
+						next=FALSE;
+					}
+				}
+
+				//освободить пам€ть выделенную под сегмент
+				local_free(rec->data);
+
+				if(rec->addr_next==start_addr)
+					next=FALSE;
+			}
+			else
+			{
+				next=FALSE;
+			}
+		}
+
+		//освобождаем
+		local_free(rec);
+	}
+	else
+	{
+		err=ERR_LOCAL_MALLOC;
+	}
+
+	return err;
+}
 
 void db_create(void *arg,...)
 {
 	void **p=&arg;
 
 	void *db_addr;
-
-	UINT32_T	size;
-	UINT32_T	addr;
-	UINT8_T		err;
-	UINT8_T		start_index;
-	UINT8_T		*buf=NULL;
-	DB_List		list;
-	UINT8_T		len;
-	UINT8_T		i;
-
+	
 	DB_Record *rec=NULL;
 
 	//первый параметр это индекс базы данных
@@ -109,7 +229,7 @@ void db_create(void *arg,...)
 	}
 	else
 	{
-		db_addr=p;
+		db_addr=*p;
 	}
 
 	//переход к следующему параметру
@@ -117,35 +237,62 @@ void db_create(void *arg,...)
 
 	if(mode_create==MODE_CREATE)
 	{
-		//получить данные по сектору старт
-		//start_index=sector_GetStartIndex();
-		//addr=sector_GetZeroSeg();
-		//
-		//err=db_record_load(start_index,addr,&buf, &size);
-		//local_free(buf);
-
-		rec=(DB_Record*)local_malloc(sizeof(DB_Record));
-		memset(rec,0x00,sizeof(DB_Record));
-
-		rec->index=sector_GetStartIndex();
-		rec->addrlen=sector_GetAddrLen(rec->index);
-		rec->addr_cur=sector_GetZeroSeg();
-		db_record_cur(rec);
-
-
 		if(*p!=NULL)
 		{
 			//если есть им€ то провести поиск Ѕƒ с подобным именем
+
+			db_FindByName(db_addr,(UINT8_T*)*p);
+
+
+			//добавление новой Ѕƒ должна быть одинакова€ функци€  !!!!!!!!!!
+
 		}
+		else
+		{
+			//создать Ѕƒ без имени
 
+			rec=(DB_Record*)local_malloc(sizeof(DB_Record));
+			
+			if(rec!=NULL)
+			{
+				memset(rec,0x00,sizeof(DB_Record));
 
+				rec->index=sector_GetStartIndex(); 
+				rec->addrlen=sector_GetAddrLen(rec->index);
+				rec->addr_cur=sector_GetZeroSeg();
+
+				//выделить место дл€ 
+				//next,prev,name,table
+				rec->size=rec->addrlen*4;
+				rec->data= (UINT8_T*)sector_RamMalloc(rec->index,&rec->size);
+
+				if(rec->data!=NULL)
+				{
+					memset(rec->data,0x00, rec->size);
+
+					db_record_add( rec );
+
+					memcpy(db_addr,&rec->addr_cur,rec->addrlen);
+					sector_RamFree(rec->data);
+				}
+				else
+				{
+					ApplicationSqlErr(ERR_LOCAL_MALLOC);
+				}
+
+				local_free(rec);
+			}
+			else
+			{
+				ApplicationSqlErr(ERR_LOCAL_MALLOC);
+				return;
+			}
+		}
 	}
 	else
 	{
 		//удаление только по номеру
 	}
-
-
 }
 
 
@@ -233,6 +380,10 @@ UINT8_T db_record_add( DB_Record *rec )
 	DB_Record *buf=NULL;
 	//загрузить ст
 
+	//!!!!!!!!!!
+	//работу сделать более пон€тной
+	//сделать корректное завершение на случай по€влени€ ошибки
+
 	if( rec->size < (UINT32_T)(rec->addrlen*2))
 	{
 		return ERR_WRONG_SIZE;
@@ -252,9 +403,9 @@ UINT8_T db_record_add( DB_Record *rec )
 		{
 			err=sector_Malloc(rec->index,&addr_new,rec->size); //выдел€ем место дл€ новой записи
 
-			if(err=ERR_OK)
+			if(err==ERR_OK)
 			{
-				if( buf->addr_next==NULL && buf->addr_prev==NULL )
+				if( buf->addr_next== (UINT32_T)NULL && buf->addr_prev==(UINT32_T)NULL )
 				{
 					//перва€ запись
 					//next
@@ -284,7 +435,7 @@ UINT8_T db_record_add( DB_Record *rec )
 					//если все хорошо, то обновить заголовок
 
 					//если перва€ запись то обновить только первый сегмент
-					if( buf->addr_next==NULL && buf->addr_prev==NULL )
+					if( buf->addr_next== (UINT32_T)NULL && buf->addr_prev==(UINT32_T)NULL )
 					{
 						//next
 						memcpy(buf->data, &addr_new, buf->addrlen);

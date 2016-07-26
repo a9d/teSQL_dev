@@ -80,7 +80,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	UINT32_T addr11;
 	UINT8_T y;
 
-	UINT16_T db_name;
+	UINT16_T db_name=0;
 
 	UINT8_T len=strlen("test");
 
@@ -98,14 +98,17 @@ int _tmain(int argc, _TCHAR* argv[])
 	sector_Insert(&config);
 
 
-	CREATE DATABASE &db_name,(UINT8_T*)"test" END;
+	//CREATE DATABASE &db_name,(UINT8_T*)"test" END;
 	CREATE DATABASE &db_name END;
+	CREATE DATABASE &db_name,NULL END;
+	CREATE DATABASE &db_name,"test" END;
 	//CREATE and DROP устанавливают тип функции
 
 	//CREATE DATABASE END;
 	//DROP DATABASE END;
 	
-	
+	//проверить ситуацию когда удаляется только заголовок
+
 	//DROP TABLE
 	//ALTER TABLE
 	//CREATE TABLE
