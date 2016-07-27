@@ -5,6 +5,7 @@
 #include "sector_hal.h"
 #include "sql.h"
 #include <memory.h>
+#include <string.h>
 
 #define MODE_DROPE  0
 #define MODE_CREATE 1
@@ -92,6 +93,7 @@ UINT8_T db_FindByName(void *db_link,UINT8_T *name)
 	UINT32_T start_addr;
 	UINT32_T name_addr;
 	UINT32_T size;
+	UINT16_T str_size;
 	DB_Record *rec=NULL;
 	//если нашли то в db_link не NULL
 
@@ -107,7 +109,7 @@ UINT8_T db_FindByName(void *db_link,UINT8_T *name)
 		start_addr=rec->addr_cur;
 
 		//очистить db_link
-		memset(db_link, 0x00, rec->addrlen);
+		//memset(db_link, 0x00, rec->addrlen);
 
 		//пройтись по всем записям в цикле
 		err=db_record_cur( rec );
@@ -162,13 +164,20 @@ UINT8_T db_FindByName(void *db_link,UINT8_T *name)
 								size=0;
 								memcpy(&size,name_check,sizeof(UINT16_T));
 
-								//сравниваем
-								if(memcmp(name, name_check+sizeof(UINT16_T), size)==0)
+								//длина проверяемой строки
+								str_size=strlen((CHAR*)name);
+
+								//если длина строк совпадает
+								if(size==str_size)
 								{
-									//если имя совпало, то копируем адрес БД
-									//иначе переходим к следующей БД
-									memcpy(db_link,&rec->addr_cur,rec->addrlen);
-									next=FALSE;
+									//сравниваем
+									if(memcmp(name, name_check+sizeof(UINT16_T), size)==0)
+									{
+										//если имя совпало, то копируем адрес БД
+										//иначе переходим к следующей БД
+										memcpy(db_link,&rec->addr_cur,rec->addrlen);
+										next=FALSE;
+									}
 								}
 							}
 							else
@@ -212,13 +221,107 @@ UINT8_T db_FindByName(void *db_link,UINT8_T *name)
 	return err;
 }
 
+UINT8_T db_AddNewDB(void *db_addr,UINT8_T *name)
+{
+	UINT8_T err=ERR_OK;
+	UINT32_T dbNameAddr=0;
+	DB_Record *rec=NULL;
+	UINT16_T str_size;
+
+	rec=(DB_Record*)local_malloc(sizeof(DB_Record));
+
+	if(rec!=NULL)
+	{
+		memset(rec,0x00,sizeof(DB_Record));
+
+		rec->index=sector_GetStartIndex(); 
+		rec->addrlen=sector_GetAddrLen(rec->index);
+		rec->addr_cur=sector_GetZeroSeg();
+
+		if(name!=NULL)
+		{
+			//запись имени
+			str_size=strlen((CHAR*)name);
+			
+			rec->size=sizeof(UINT16_T)+str_size; //длина строки + строка
+			
+			rec->data=(UINT8_T*)sector_RamMalloc(rec->index,&rec->size);
+			if(rec->data!=NULL)
+			{
+				//записать длину строки
+				memcpy(rec->data,&str_size,sizeof(UINT16_T));
+				//записать строку
+				memcpy(rec->data+sizeof(UINT16_T),name,str_size);
+
+				//выделяем сегмент
+				err=sector_Malloc(rec->index,&dbNameAddr,rec->size);
+				if(err==ERR_OK)
+				{
+					//записываем имя БД
+					err=sector_write(rec->index,dbNameAddr,rec->data,rec->size);
+
+					if(err!=ERR_OK)
+					{
+						//если запись не удалась, то пробуем освободить сегмент
+						sector_Free(rec->index,dbNameAddr);
+					}
+				}
+
+				sector_RamFree(rec->data);
+			}
+			else
+			{
+				err=ERR_LOCAL_MALLOC;
+			}
+		}
+
+		//проверить err
+		if(err==ERR_OK)
+		{
+			//выделить место для 
+			//next,prev,name,table
+			rec->size=rec->addrlen*4;
+			rec->data= (UINT8_T*)sector_RamMalloc(rec->index,&rec->size);
+
+			if(rec->data!=NULL)
+			{
+				memset(rec->data,0x00, rec->size);
+
+				if(dbNameAddr!=0);
+				{
+					//записываем указатель на имя БД
+					memcpy(rec->data+rec->addrlen*2, &dbNameAddr, rec->addrlen);
+				}
+
+				err=db_record_add( rec );
+
+				//возвращаем указатель на БД
+				memcpy(db_addr,&rec->addr_cur,rec->addrlen);
+				sector_RamFree(rec->data);
+			}
+			else
+			{
+				err=ERR_LOCAL_MALLOC;
+			}
+		}
+
+		local_free(rec);
+	}
+	else
+	{
+		err=ERR_LOCAL_MALLOC;
+	}
+
+	return err;
+}
+
 void db_create(void *arg,...)
 {
 	void **p=&arg;
 
 	void *db_addr;
-	
-	DB_Record *rec=NULL;
+	UINT8_T err=ERR_OK;
+	UINT32_T addr=0;
 
 	//первый параметр это индекс базы данных
 	if(*p==NULL)
@@ -239,59 +342,32 @@ void db_create(void *arg,...)
 	{
 		if(*p!=NULL)
 		{
-			//если есть имя то провести поиск БД с подобным именем
-
-			db_FindByName(db_addr,(UINT8_T*)*p);
-
-
-			//добавление новой БД должна быть одинаковая функция  !!!!!!!!!!
-
+			//проверям существует ли уже БД с подобным именем
+			err=db_FindByName(&addr,(UINT8_T*)*p);
 		}
-		else
-		{
-			//создать БД без имени
 
-			rec=(DB_Record*)local_malloc(sizeof(DB_Record));
-			
-			if(rec!=NULL)
+		if(err==ERR_OK)
+		{ 
+			//если addr!=0 то БД с подобным именем уже существует 
+			if(addr==0)
 			{
-				memset(rec,0x00,sizeof(DB_Record));
-
-				rec->index=sector_GetStartIndex(); 
-				rec->addrlen=sector_GetAddrLen(rec->index);
-				rec->addr_cur=sector_GetZeroSeg();
-
-				//выделить место для 
-				//next,prev,name,table
-				rec->size=rec->addrlen*4;
-				rec->data= (UINT8_T*)sector_RamMalloc(rec->index,&rec->size);
-
-				if(rec->data!=NULL)
-				{
-					memset(rec->data,0x00, rec->size);
-
-					db_record_add( rec );
-
-					memcpy(db_addr,&rec->addr_cur,rec->addrlen);
-					sector_RamFree(rec->data);
-				}
-				else
-				{
-					ApplicationSqlErr(ERR_LOCAL_MALLOC);
-				}
-
-				local_free(rec);
+				err=db_AddNewDB(db_addr,(UINT8_T*)*p);
 			}
 			else
 			{
-				ApplicationSqlErr(ERR_LOCAL_MALLOC);
-				return;
+				err=ERR_DB_ALREDY_EXISTS;
 			}
 		}
 	}
 	else
 	{
 		//удаление только по номеру
+	}
+
+
+	if(err!=ERR_OK)
+	{
+		ApplicationSqlErr(err);
 	}
 }
 
@@ -474,6 +550,11 @@ UINT8_T db_record_add( DB_Record *rec )
 
 					}
 				}//if
+				else
+				{
+					//пробуем освободить сектор если запись не удалась
+					sector_Free(rec->index,addr_new);
+				}
 				
 				rec->addr_cur=addr_new;
 				local_free(buf->data);

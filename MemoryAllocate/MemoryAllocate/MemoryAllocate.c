@@ -102,7 +102,10 @@ int _tmain(int argc, _TCHAR* argv[])
 	CREATE DATABASE &db_name END;
 	CREATE DATABASE &db_name,NULL END;
 	CREATE DATABASE &db_name,"test" END;
-	//CREATE and DROP устанавливают тип функции
+	//CREATE DATABASE &db_name,"test" END;
+	CREATE DATABASE &db_name,"test1" END;
+	
+	DROPE DATABASE &db_name END;
 
 	//CREATE DATABASE END;
 	//DROP DATABASE END;

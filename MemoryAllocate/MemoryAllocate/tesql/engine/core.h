@@ -48,6 +48,8 @@ UINT8_T db_record_del( DB_Record *rec );  //удалить указанную запись
 UINT8_T db_FindByName(void *db_link,UINT8_T *name);
 
 
+UINT8_T db_AddNewDB(void *db_addr,UINT8_T *name);
+
 //решить проблему с буффером
 //UINT8_T db_record_load(UINT8_T index,UINT32_T addr, UINT8_T **buf,UINT32_T *size);
 //db_record_next

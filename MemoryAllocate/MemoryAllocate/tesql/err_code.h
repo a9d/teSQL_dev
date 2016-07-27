@@ -29,6 +29,7 @@ extern "C" {
 #define ERR_SL_NULL				((UINT8_T)19)
 #define ERR_NO_MAIN				((UINT8_T)20)
 #define ERR_SQL_DB_ADDR			((UINT8_T)21)
+#define ERR_DB_ALREDY_EXISTS	((UINT8_T)22)
 
 #ifdef  __cplusplus
 }
