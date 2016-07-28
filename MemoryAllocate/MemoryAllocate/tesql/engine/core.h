@@ -45,8 +45,10 @@ UINT8_T db_record_del( DB_Record *rec );  //удалить указанную запись
 //вернуть список всех Ѕƒ
 
 //вернуть с указанным именем
-UINT8_T db_FindByName(void *db_link,UINT8_T *name);
+UINT8_T db_FindByName(UINT32_T first_addr, void *db_link,UINT8_T *name);
 
+UINT8_T db_BaseByName(void *db_link,UINT8_T *name);
+UINT8_T db_TableByName(void *db_link,UINT8_T *name);
 
 UINT8_T db_AddNewDB(void *db_addr,UINT8_T *name);
 

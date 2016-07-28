@@ -82,10 +82,15 @@ void db_set_mode(UINT8_T mode)
 //	i+=len;
 //}
 
-//массив всегда с crc
-//первые два байта длина массива
 
-UINT8_T db_FindByName(void *db_link,UINT8_T *name)
+//функци€ поиска по имени должна быть универсальной
+
+//им€ Ѕƒ, таблиц, хранитс€ только в секторе START
+
+//смещение от начала на указатель с именем
+
+
+UINT8_T db_FindByName(UINT32_T first_addr, void *db_link,UINT8_T *name)
 {
 	UINT8_T err=ERR_OK;
 	UINT8_T next;
@@ -105,7 +110,7 @@ UINT8_T db_FindByName(void *db_link,UINT8_T *name)
 
 		rec->index=sector_GetStartIndex(); 
 		rec->addrlen=sector_GetAddrLen(rec->index);
-		rec->addr_cur=sector_GetZeroSeg();
+		rec->addr_cur=first_addr;//sector_GetZeroSeg();
 		start_addr=rec->addr_cur;
 
 		//очистить db_link
@@ -278,6 +283,19 @@ UINT8_T db_AddNewDB(void *db_addr,UINT8_T *name)
 		//проверить err
 		if(err==ERR_OK)
 		{
+			//err=db_record_cur( rec );
+			//if(err==ERR_OK)
+			//{
+			//	local_free(rec->data);
+
+			//	if( rec->addr_next!=(UINT32_T)NULL && rec->addr_prev!=(UINT32_T)NULL )
+			//	{
+			//		//указатель на последнюю запись
+			//		rec->addr_cur=rec->addr_prev;
+			//	}
+			//}
+
+
 			//выделить место дл€ 
 			//next,prev,name,table
 			rec->size=rec->addrlen*4;
@@ -287,7 +305,7 @@ UINT8_T db_AddNewDB(void *db_addr,UINT8_T *name)
 			{
 				memset(rec->data,0x00, rec->size);
 
-				if(dbNameAddr!=0);
+				if(dbNameAddr!=0)
 				{
 					//записываем указатель на им€ Ѕƒ
 					memcpy(rec->data+rec->addrlen*2, &dbNameAddr, rec->addrlen);
@@ -301,6 +319,11 @@ UINT8_T db_AddNewDB(void *db_addr,UINT8_T *name)
 			}
 			else
 			{
+				//удалить запись с именем
+				if(dbNameAddr!=0)
+				{
+					sector_Free(rec->index,dbNameAddr);
+				}
 				err=ERR_LOCAL_MALLOC;
 			}
 		}
@@ -313,6 +336,11 @@ UINT8_T db_AddNewDB(void *db_addr,UINT8_T *name)
 	}
 
 	return err;
+}
+
+UINT8_T db_BaseByName(void *db_link,UINT8_T *name)
+{
+	return db_FindByName(sector_GetZeroSeg(),db_link,name);
 }
 
 void db_create(void *arg,...)
@@ -343,7 +371,7 @@ void db_create(void *arg,...)
 		if(*p!=NULL)
 		{
 			//провер€м существует ли уже Ѕƒ с подобным именем
-			err=db_FindByName(&addr,(UINT8_T*)*p);
+			err=db_BaseByName(&addr,(UINT8_T*)*p);//db_FindByName(sector_GetZeroSeg(),&addr,(UINT8_T*)*p);
 		}
 
 		if(err==ERR_OK)
@@ -372,27 +400,6 @@ void db_create(void *arg,...)
 }
 
 
-//UINT8_T db_record_load(UINT8_T index,UINT32_T addr, UINT8_T **buf,UINT32_T *size)
-//{
-//	UINT8_T err;
-//
-//	err=sector_GetSegmentSize(index, addr, size);
-//
-//	if(err==ERR_OK)
-//	{
-//		*buf=(UINT8_T*)local_malloc(*size);
-//		if(buf!=NULL)
-//		{
-//			err=sector_read(index,addr,*buf,*size);
-//		}
-//		else
-//		{
-//			err=ERR_LOCAL_MALLOC;
-//		}
-//	}
-//
-//	return err;
-//}
 
 UINT8_T db_record_cur( DB_Record *rec )
 {
@@ -449,6 +456,8 @@ UINT8_T db_record_next( DB_Record *rec )
 	//UINT32_T	addr_prev;	//не используетс€ 
 	//UINT32_T	size;		размер записываемого пол€
 	//UINT8_T	*data;		данные дл€ записи
+
+//должна добавл€ть всегда в конец
 UINT8_T db_record_add( DB_Record *rec )
 {
 	UINT8_T err=ERR_OK;
@@ -495,11 +504,13 @@ UINT8_T db_record_add( DB_Record *rec )
 					//создать новый заголовок
 					//в новом prev = cur
 					//		  next = old_next
+					//next = prev
 
 					//next
-					memcpy(rec->data, &buf->addr_next, buf->addrlen);
+					//memcpy(rec->data, &buf->addr_next, buf->addrlen);
+					memcpy(rec->data, &buf->addr_cur, buf->addrlen);
 					//prev
-					memcpy(rec->data+rec->addrlen, &buf->addr_cur, buf->addrlen);
+					memcpy(rec->data+rec->addrlen, &buf->addr_prev, buf->addrlen);
 				}
 
 
@@ -526,7 +537,9 @@ UINT8_T db_record_add( DB_Record *rec )
 
 						//в предыдущем обновить запись next = addr_new
 						//next
-						memcpy(buf->data, &addr_new, buf->addrlen);
+						//memcpy(buf->data, &addr_new, buf->addrlen);
+						//prev
+						memcpy(buf->data+buf->addrlen, &addr_new, buf->addrlen);
 
 						err=sector_write(buf->index, buf->addr_cur, buf->data, buf->size);
 
@@ -534,14 +547,16 @@ UINT8_T db_record_add( DB_Record *rec )
 						{
 							//обновить следующую запись
 							local_free(buf->data);
-							err=db_record_next(buf);
-
+							//err=db_record_next(buf);
+							err=db_record_prev(buf);
 						
 							if(err==ERR_OK)
 							{
 								//в следующем обновить запись prev = addr_new
 								//prev
-								memcpy(buf->data+buf->addrlen, &addr_new, buf->addrlen);
+								//memcpy(buf->data+buf->addrlen, &addr_new, buf->addrlen);
+								//next
+								memcpy(buf->data, &addr_new, buf->addrlen);
 
 								err=sector_write(buf->index, buf->addr_cur, buf->data, buf->size);
 							}

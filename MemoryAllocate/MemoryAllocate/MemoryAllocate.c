@@ -69,6 +69,8 @@ void ApplicationSqlErr(UINT8_T err)
 //добавить функцию получения нулевого адреса
 //добавить фунцию высокоуровнего чтения/записи
 
+#define AVG(X) X,10
+
 int _tmain(int argc, _TCHAR* argv[])
 {
 	int i;
@@ -105,7 +107,15 @@ int _tmain(int argc, _TCHAR* argv[])
 	//CREATE DATABASE &db_name,"test" END;
 	CREATE DATABASE &db_name,"test1" END;
 	
-	DROPE DATABASE &db_name END;
+	CREATE DATABASE &db_name,"test1" END;
+
+	db_BaseByName(&db_name,(UINT8_T*)"test");
+
+	//БД должны добавляться в конец списка!
+	//получить список существующих БД
+	//получить указатель на БД по имени
+
+	//DROPE DATABASE AVG(&db_name) END;
 
 	//CREATE DATABASE END;
 	//DROP DATABASE END;
