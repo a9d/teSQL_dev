@@ -41,6 +41,14 @@ extern void ApplicationSqlErr(UINT8_T err);
 
 
 
+//текущий 
+//следующий
+//имя
+
+//загрузка массива
+//db_LoadArray(адрес, указатель)
+
+
 
 //UINT8_T recor2db_header(UINT8_T index, DB_Header *header, UINT8_T *data);
 //void recor2db_header_list(UINT8_T index, DB_List *list, UINT8_T i, UINT8_T *data);
@@ -82,13 +90,176 @@ void db_set_mode(UINT8_T mode)
 //	i+=len;
 //}
 
+//индекс сектора
+//адрес массива
+//указатель на указатель
+UINT8_T db_LoadArray(UINT8_T index, UINT32_T addr, UINT8_T **arr)
+{
+	UINT8_T err;
+	UINT32_T size;
 
-//функция поиска по имени должна быть универсальной
+	*arr=NULL;
 
-//имя БД, таблиц, хранится только в секторе START
+	err=sector_GetSegmentSize(index,addr,&size);
+	if(err==ERR_OK)
+	{
+		//выделить место под массив
+		*arr=(UINT8_T*)local_malloc(size);
+		if(*arr!=NULL)
+		{
+			err=sector_read(index,addr,*arr,size);
+			if(err!=ERR_OK)
+			{
+				local_free(*arr);
+			}
+		}
+		else
+		{
+			err=ERR_LOCAL_MALLOC;
+		}
+	}
 
-//смещение от начала на указатель с именем
+	return err;
+}
 
+//вставить функцию err=db_LoadArray(rec->index, arr_addr, &arr); 
+//UINT8_T db_FindByName(UINT32_T first_addr, void *db_link,UINT8_T *name)
+//{
+//	UINT8_T err=ERR_OK;
+//	UINT8_T next;
+//	UINT8_T *name_check=NULL;
+//	UINT32_T start_addr;
+//	UINT32_T name_addr;
+//	UINT32_T size;
+//	UINT16_T str_size;
+//	DB_Record *rec=NULL;
+//	//если нашли то в db_link не NULL
+//
+//	rec=(DB_Record*)local_malloc(sizeof(DB_Record));
+//
+//	if(rec!=NULL)
+//	{
+//		memset(rec,0x00,sizeof(DB_Record));
+//
+//		rec->index=sector_GetStartIndex(); 
+//		rec->addrlen=sector_GetAddrLen(rec->index);
+//		rec->addr_cur=first_addr;//sector_GetZeroSeg();
+//		start_addr=rec->addr_cur;
+//
+//		//очистить db_link
+//		//memset(db_link, 0x00, rec->addrlen);
+//
+//		//пройтись по всем записям в цикле
+//		err=db_record_cur( rec );
+//
+//		if(err!=ERR_OK)
+//		{
+//			local_free(rec);
+//			return err;
+//		}
+//
+//		local_free(rec->data);
+//
+//		if( (rec->addr_next==(UINT32_T)NULL) && (rec->addr_prev==(UINT32_T)NULL) )
+//		{
+//			//БД отсуствует
+//			next=FALSE;
+//		}
+//		else
+//		{
+//			next=TRUE;
+//		}
+//
+//
+//		//пройтись по всем записям
+//		while(next)
+//		{
+//			err=db_record_next(rec);
+//
+//			if(err==ERR_OK)
+//			{
+//				//загрузить указатель на имя
+//				name_addr=(UINT32_T)NULL;
+//				memcpy(&name_addr,rec->data+rec->addrlen*2,rec->addrlen);
+//
+//				if(name_addr!=(UINT32_T)NULL)
+//				{
+//					//проверить имя
+//
+//					//размер сегмента
+//					size=0;
+//					err=sector_GetSegmentSize(rec->index,name_addr,&size);
+//
+//					//err=db_LoadArray(rec->index, name_addr, &arr); 
+//					if(err==ERR_OK)
+//					{
+//						//выделить место под массив
+//						name_check=(UINT8_T*)local_malloc(size);
+//						if(name_check!=NULL)
+//						{
+//							err=sector_read(rec->index,name_addr,name_check,size);
+//							if(err==ERR_OK)
+//							{
+//								//загружаем длину строки
+//								size=0;
+//								memcpy(&size,name_check,sizeof(UINT16_T));
+//
+//								//длина проверяемой строки
+//								str_size=strlen((CHAR*)name);
+//
+//								//если длина строк совпадает
+//								if(size==str_size)
+//								{
+//									//сравниваем
+//									if(memcmp(name, name_check+sizeof(UINT16_T), size)==0)
+//									{
+//										//если имя совпало, то копируем адрес БД
+//										//иначе переходим к следующей БД
+//										memcpy(db_link,&rec->addr_cur,rec->addrlen);
+//										next=FALSE;
+//									}
+//								}
+//							}
+//							else
+//							{
+//								next=FALSE;
+//							}
+//							local_free(name_check);
+//						}
+//						else
+//						{
+//							err=ERR_LOCAL_MALLOC;
+//							next=FALSE;
+//						}
+//					}
+//					else
+//					{
+//						next=FALSE;
+//					}
+//				}
+//
+//				//освободить память выделенную под сегмент
+//				local_free(rec->data);
+//
+//				if(rec->addr_next==start_addr)
+//					next=FALSE;
+//			}
+//			else
+//			{
+//				next=FALSE;
+//			}
+//		}
+//
+//		//освобождаем
+//		local_free(rec);
+//	}
+//	else
+//	{
+//		err=ERR_LOCAL_MALLOC;
+//	}
+//
+//	return err;
+//}
 
 UINT8_T db_FindByName(UINT32_T first_addr, void *db_link,UINT8_T *name)
 {
@@ -127,7 +298,7 @@ UINT8_T db_FindByName(UINT32_T first_addr, void *db_link,UINT8_T *name)
 
 		local_free(rec->data);
 
-		if( (rec->addr_next==(UINT32_T)NULL) && (rec->addr_prev=(UINT32_T)NULL) )
+		if( (rec->addr_next==(UINT32_T)NULL) && (rec->addr_prev==(UINT32_T)NULL) )
 		{
 			//БД отсуствует
 			next=FALSE;
@@ -152,50 +323,31 @@ UINT8_T db_FindByName(UINT32_T first_addr, void *db_link,UINT8_T *name)
 				if(name_addr!=(UINT32_T)NULL)
 				{
 					//проверить имя
-
-					//размер сегмента
-					size=0;
-					err=sector_GetSegmentSize(rec->index,name_addr,&size);
+					err=db_LoadArray(rec->index, name_addr, &name_check); 
 					if(err==ERR_OK)
 					{
-						//выделить место под массив
-						name_check=(UINT8_T*)local_malloc(size);
-						if(name_check!=NULL)
+						//загружаем длину строки
+						size=0;
+						memcpy(&size,name_check,sizeof(UINT16_T));
+						
+						//длина проверяемой строки
+						str_size=strlen((CHAR*)name);
+						
+						//если длина строк совпадает
+						if(size==str_size)
 						{
-							err=sector_read(rec->index,name_addr,name_check,size);
-							if(err==ERR_OK)
+							//сравниваем
+							if(memcmp(name, name_check+sizeof(UINT16_T), size)==0)
 							{
-								//загружаем длину строки
-								size=0;
-								memcpy(&size,name_check,sizeof(UINT16_T));
-
-								//длина проверяемой строки
-								str_size=strlen((CHAR*)name);
-
-								//если длина строк совпадает
-								if(size==str_size)
-								{
-									//сравниваем
-									if(memcmp(name, name_check+sizeof(UINT16_T), size)==0)
-									{
-										//если имя совпало, то копируем адрес БД
-										//иначе переходим к следующей БД
-										memcpy(db_link,&rec->addr_cur,rec->addrlen);
-										next=FALSE;
-									}
-								}
-							}
-							else
-							{
+								//если имя совпало, то копируем адрес БД
+								//иначе переходим к следующей БД
+								memcpy(db_link,&rec->addr_cur,rec->addrlen);
 								next=FALSE;
 							}
-							local_free(name_check);
 						}
-						else
-						{
-							err=ERR_LOCAL_MALLOC;
-							next=FALSE;
-						}
+
+						local_free(name_check);
+
 					}
 					else
 					{
@@ -338,9 +490,126 @@ UINT8_T db_AddNewDB(void *db_addr,UINT8_T *name)
 	return err;
 }
 
-UINT8_T db_BaseByName(void *db_link,UINT8_T *name)
+UINT8_T db_GetDB(void *db_link,UINT8_T *name)
 {
-	return db_FindByName(sector_GetZeroSeg(),db_link,name);
+	UINT8_T err;
+	//захватить мьютекс
+	LOCK;
+	err=db_FindByName(sector_GetZeroSeg(),db_link,name);
+	//освободить мьютекс
+	UNLOCK;
+	return err;
+}
+
+
+UINT8_T db_GetAllDB(void *db_link, UINT8_T *name,UINT8_T max_len)
+{
+	UINT8_T err=ERR_OK;
+	UINT32_T arr_addr;
+	DB_Record *rec=NULL;
+	UINT8_T *arr=NULL;
+
+	//захватить мьютекс
+	LOCK;
+
+	rec=(DB_Record*)local_malloc(sizeof(DB_Record));
+
+	if(rec!=NULL)
+	{
+		memset(rec,0x00,sizeof(DB_Record));
+		
+		rec->index=sector_GetStartIndex();
+		rec->addrlen=sector_GetAddrLen(rec->index);
+
+		memcpy(&rec->addr_cur ,db_link,rec->addrlen);
+
+		//Если 0 то загрузить первую запись
+		if(rec->addr_cur==0)
+		{
+			//адрес нулевого сегмента
+			rec->addr_cur=sector_GetZeroSeg();
+		}
+		
+		//загружаем текущую запись
+		err=db_record_cur(rec);
+		if(err==ERR_OK)
+		{
+			local_free(rec->data);
+
+			if( rec->addr_next==(UINT32_T)NULL && rec->addr_prev==(UINT32_T)NULL )
+			{
+				//в списке нет БД
+				err=ERR_DB_END;
+			}
+		}
+
+
+		if(err==ERR_OK)
+		{
+			//загрузить указатель на бд
+			err=db_record_next(rec);
+			
+			if(err==ERR_OK)
+			{
+				//если требуется еще и имя
+				if(max_len>0)
+				{
+					//проверить указатель на NULL
+					arr_addr=0;
+					memcpy(&arr_addr,rec->data+2*rec->addrlen,rec->addrlen);
+
+					if(arr_addr!=(UINT32_T)NULL)
+					{
+						//загрузить имя
+						err=db_LoadArray(rec->index, arr_addr, &arr); 
+
+						//считать длину массива
+						arr_addr=0;
+						memcpy(&arr_addr,arr,sizeof(UINT16_T));
+
+						if(arr_addr<max_len)
+						{
+							memcpy(name, arr+sizeof(UINT16_T), arr_addr);
+							name[arr_addr]=0;
+						}
+						else
+						{
+							err=ERR_NAME_LEN;
+						}
+
+						if(err==ERR_OK || err==ERR_NAME_LEN)
+						{
+							local_free(arr);
+						}
+					}
+					else
+					{
+						name[0]=0;
+					}
+				}
+				local_free(rec->data);
+
+				memcpy(db_link , &rec->addr_cur, rec->addrlen);
+
+				//проверить следующую БД
+				if(rec->addr_next==sector_GetZeroSeg())
+				{
+					//конец списка
+					err=ERR_DB_END;
+				}
+			}
+		}
+		
+		local_free(rec);
+	}
+	else
+	{
+		err=ERR_LOCAL_MALLOC;
+	}
+
+	//освободить мьютекс
+	UNLOCK;
+	return err;
 }
 
 void db_create(void *arg,...)
@@ -371,7 +640,7 @@ void db_create(void *arg,...)
 		if(*p!=NULL)
 		{
 			//проверям существует ли уже БД с подобным именем
-			err=db_BaseByName(&addr,(UINT8_T*)*p);//db_FindByName(sector_GetZeroSeg(),&addr,(UINT8_T*)*p);
+			err=db_GetDB(&addr,(UINT8_T*)*p);//db_FindByName(sector_GetZeroSeg(),&addr,(UINT8_T*)*p);
 		}
 
 		if(err==ERR_OK)
@@ -390,6 +659,10 @@ void db_create(void *arg,...)
 	else
 	{
 		//удаление только по номеру
+
+		//удалить БД
+		//удалить все таблицы БД
+		//удалить все записи БД
 	}
 
 
@@ -588,5 +861,54 @@ UINT8_T db_record_add( DB_Record *rec )
 
 UINT8_T db_record_del( DB_Record *rec )
 {
-	return 0;
+	UINT8_T err;
+	UINT32_T next,prev;
+	//считать указанный сектор
+	err=db_record_cur(rec);
+
+	if(err==ERR_OK)
+	{
+		local_free(rec->data);
+
+		//удаляем сегмент
+		err=sector_Free(rec->index,rec->addr_cur);
+
+		if(err==ERR_OK)
+		{
+			if(rec->addr_next!=rec->addr_prev)
+			{
+				next=rec->addr_next;
+				prev=rec->addr_prev;
+
+				//считать next и обновить поле prev
+				rec->addr_cur=next;
+				db_record_cur(rec);
+				memcpy(rec->data+rec->addrlen, &prev, rec->addrlen);
+				sector_write(rec->index,rec->addr_cur,rec->data,rec->size);
+				local_free(rec->data);
+
+				//считать prev и обновить поле next
+				rec->addr_cur=prev;
+				db_record_cur(rec);
+				memcpy(rec->data, &next, rec->addrlen);
+				sector_write(rec->index,rec->addr_cur,rec->data,rec->size);
+				local_free(rec->data);
+			}
+			else if(rec->addr_next==rec->addr_prev)
+			{
+				//предпоследняя запись в списке
+				err=db_record_next(rec);
+
+				memset(rec->data,0x00,rec->addrlen*2);
+
+				err=sector_write(rec->index,rec->addr_cur,rec->data,rec->size);
+			}
+			//else
+			//{
+			//	//последня запись
+			//}
+		}
+	}
+
+	return err;
 }

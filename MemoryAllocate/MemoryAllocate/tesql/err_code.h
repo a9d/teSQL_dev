@@ -26,10 +26,12 @@ extern "C" {
 #define ERR_ADDR_LEN			((UINT8_T)16)
 #define ERR_SIZE_LEN			((UINT8_T)17)
 #define ERR_SECTOR_FREE			((UINT8_T)18)
-#define ERR_SL_NULL				((UINT8_T)19)
+#define ERR_SL_NULL				((UINT8_T)19) //sector list is null
 #define ERR_NO_MAIN				((UINT8_T)20)
 #define ERR_SQL_DB_ADDR			((UINT8_T)21)
 #define ERR_DB_ALREDY_EXISTS	((UINT8_T)22)
+#define ERR_DB_END				((UINT8_T)23) //
+#define ERR_NAME_LEN			((UINT8_T)24)
 
 #ifdef  __cplusplus
 }

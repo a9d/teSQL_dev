@@ -16,11 +16,14 @@ extern void ApplicationSqlUnlockHook();
 //#define DATABASE(__INDEX,__NAME)	db_create(__INDEX, __NAME);
 //#define END			ApplicationSqlUnlockHook();
 
-#define CREATE		ApplicationSqlLockHook();db_set_mode(1);
-#define DROPE		ApplicationSqlLockHook();db_set_mode(0);
+#define LOCK	ApplicationSqlLockHook()
+#define UNLOCK	ApplicationSqlUnlockHook()
+
+#define CREATE		LOCK;db_set_mode(1);
+#define DROP		LOCK;db_set_mode(0);
 
 #define DATABASE	db_create(
-#define END			,NULL); ApplicationSqlUnlockHook();
+#define END			,NULL); UNLOCK;
 
 
 #endif

@@ -81,6 +81,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	UINT8_T buf[]={1,2,3,4,5,6};
 	UINT32_T addr11;
 	UINT8_T y;
+	UINT8_T buf1[20];
 
 	UINT16_T db_name=0;
 
@@ -100,25 +101,29 @@ int _tmain(int argc, _TCHAR* argv[])
 	sector_Insert(&config);
 
 
-	//CREATE DATABASE &db_name,(UINT8_T*)"test" END;
+	CREATE DATABASE &db_name,(UINT8_T*)"test" END;
 	CREATE DATABASE &db_name END;
 	CREATE DATABASE &db_name,NULL END;
 	CREATE DATABASE &db_name,"test" END;
-	//CREATE DATABASE &db_name,"test" END;
+	CREATE DATABASE &db_name,"test" END;
 	CREATE DATABASE &db_name,"test1" END;
-	
+	//
 	CREATE DATABASE &db_name,"test1" END;
 
-	db_BaseByName(&db_name,(UINT8_T*)"test");
 
-	//БД должны добавляться в конец списка!
-	//получить список существующих БД
-	//получить указатель на БД по имени
+	db_GetDB(&db_name,(UINT8_T*)"test");
+
+	db_name=0;
+	while(db_GetAllDB(&db_name, buf1,5)==ERR_OK){};
+
+
 
 	//DROPE DATABASE AVG(&db_name) END;
 
+	db_GetDB(&db_name,(UINT8_T*)"test");
+
 	//CREATE DATABASE END;
-	//DROP DATABASE END;
+	DROP DATABASE &db_name END;
 	
 	//проверить ситуацию когда удаляется только заголовок
 
