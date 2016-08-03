@@ -32,6 +32,7 @@ extern "C" {
 #define ERR_DB_ALREDY_EXISTS	((UINT8_T)22)
 #define ERR_DB_END				((UINT8_T)23) //
 #define ERR_NAME_LEN			((UINT8_T)24)
+#define ERR_DB_ADDR				((UINT8_T)25)
 
 #ifdef  __cplusplus
 }

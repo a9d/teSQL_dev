@@ -17,6 +17,8 @@ UINT8_T mode_create;
 extern void ApplicationSqlErr(UINT8_T err);
 
 
+UINT8_T DeleteDB(void *db_addr); //удаление БД
+
 
 		//номер БД(это адрес БД)
 		//-указатель на имя БД - допустимо NULL
@@ -60,6 +62,7 @@ void db_set_mode(UINT8_T mode)
 	mode_create=mode;
 }
 
+
 //конвертировать массив в заголовок
 //UINT8_T recor2db_header(UINT8_T index, DB_Header *header, UINT8_T *data)
 //{
@@ -89,6 +92,66 @@ void db_set_mode(UINT8_T mode)
 //	memcpy(&list->tbl_list,data+i,len);
 //	i+=len;
 //}
+
+UINT8_T DeleteDB(void *db_addr)
+{
+	UINT8_T err;
+	DB_Record *rec=NULL;
+	UINT32_T name_addr;
+
+	//удаление всех записей
+	//удаление всех таблиц
+
+	//удаление БД
+	rec=(DB_Record*)local_malloc(sizeof(DB_Record));
+	if(rec!=NULL)
+	{
+		memset(rec,0x00,sizeof(DB_Record));
+
+		rec->index=sector_GetStartIndex();
+		rec->addrlen=sector_GetAddrLen(rec->index);	
+		memcpy(&rec->addr_cur,db_addr,rec->addrlen);
+
+		//нулевой сегмент удалться нельзя
+		if(rec->addr_cur==(UINT32_T)NULL || rec->addr_cur==sector_GetZeroSeg())
+		{
+			err=ERR_DB_ADDR;
+		}
+		else
+		{
+			err=db_record_cur(rec);
+
+			if(err==ERR_OK)
+			{
+				//проверить наличие имени
+				name_addr=0;
+				memcpy(&name_addr,rec->data+rec->addrlen*2,rec->addrlen);
+
+				if(name_addr!=0)
+				{
+					//удалить сегмент с именем
+					err=sector_Free(rec->index,name_addr);
+				}
+
+				local_free(rec->data);
+			
+				if(err==ERR_OK)
+				{
+					//удалить БД
+					err=db_record_del(rec);
+				}
+			}
+		}
+
+		local_free(rec);
+	}
+	else
+	{
+		err=ERR_LOCAL_MALLOC;
+	}
+
+	return err;
+}
 
 //индекс сектора
 //адрес массива
@@ -663,6 +726,9 @@ void db_create(void *arg,...)
 		//удалить БД
 		//удалить все таблицы БД
 		//удалить все записи БД
+
+		err=DeleteDB(db_addr);
+		
 	}
 
 
@@ -864,11 +930,11 @@ UINT8_T db_record_del( DB_Record *rec )
 	UINT8_T err;
 	UINT32_T next,prev;
 	//считать указанный сектор
-	err=db_record_cur(rec);
+	//err=db_record_cur(rec);
 
-	if(err==ERR_OK)
-	{
-		local_free(rec->data);
+	//if(err==ERR_OK)
+	//{
+		//local_free(rec->data);
 
 		//удаляем сегмент
 		err=sector_Free(rec->index,rec->addr_cur);
@@ -882,33 +948,48 @@ UINT8_T db_record_del( DB_Record *rec )
 
 				//считать next и обновить поле prev
 				rec->addr_cur=next;
-				db_record_cur(rec);
-				memcpy(rec->data+rec->addrlen, &prev, rec->addrlen);
-				sector_write(rec->index,rec->addr_cur,rec->data,rec->size);
-				local_free(rec->data);
+				err=db_record_cur(rec);
+				if(err==ERR_OK)
+				{
+					memcpy(rec->data+rec->addrlen, &prev, rec->addrlen);
+					err=sector_write(rec->index,rec->addr_cur,rec->data,rec->size);
+					local_free(rec->data);
+				}
+
+				if(err!=ERR_OK)
+					return err;
 
 				//считать prev и обновить поле next
 				rec->addr_cur=prev;
-				db_record_cur(rec);
-				memcpy(rec->data, &next, rec->addrlen);
-				sector_write(rec->index,rec->addr_cur,rec->data,rec->size);
-				local_free(rec->data);
+				err=db_record_cur(rec);
+				if(err==ERR_OK)
+				{
+					memcpy(rec->data, &next, rec->addrlen);
+					err=sector_write(rec->index,rec->addr_cur,rec->data,rec->size);
+					local_free(rec->data);
+				}
+
+				//if(err!=ERR_OK)
+				//	return err;
 			}
 			else if(rec->addr_next==rec->addr_prev)
 			{
 				//предпоследняя запись в списке
 				err=db_record_next(rec);
 
-				memset(rec->data,0x00,rec->addrlen*2);
-
-				err=sector_write(rec->index,rec->addr_cur,rec->data,rec->size);
+				if(err==ERR_OK)
+				{
+					memset(rec->data,0x00,rec->addrlen*2);
+					err=sector_write(rec->index,rec->addr_cur,rec->data,rec->size);
+					local_free(rec->data);
+				}
 			}
 			//else
 			//{
 			//	//последня запись
 			//}
 		}
-	}
+	//}
 
 	return err;
 }

@@ -6,7 +6,7 @@
 
 //CREATE DATABASE [IF NOT EXISTS] db_name
 
-#define DB_NEW	0
+//#define DB_NEW	0
 
 extern void ApplicationSqlLockHook();
 extern void ApplicationSqlUnlockHook();
