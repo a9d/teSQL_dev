@@ -18,6 +18,12 @@ void db_set_mode(UINT8_T mode);
 
 void db_create(void *arg,...);
 
+void db_create_tbl(void *arg,...);
+void db_create_tbl_rows(void *arg,...);
+
+//указать сектор для сохранения ТБ из РАМ
+void db_save_sector(UINT8_T index);
+
 //чтение записи
 //
 

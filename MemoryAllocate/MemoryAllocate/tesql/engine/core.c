@@ -675,6 +675,20 @@ UINT8_T db_GetAllDB(void *db_link, UINT8_T *name,UINT8_T max_len)
 	return err;
 }
 
+
+void db_create_tbl(void *arg,...)
+{
+	void **p=&arg;
+}
+
+void db_create_tbl_rows(void *arg,...)
+{
+}
+
+void db_save_sector(UINT8_T index)
+{
+}
+
 void db_create(void *arg,...)
 {
 	void **p=&arg;
@@ -684,7 +698,7 @@ void db_create(void *arg,...)
 	UINT32_T addr=0;
 
 	//первый параметр это индекс базы данных
-	if(*p==NULL)
+	if(*p==NULL && (UINT32_T)*p==MAGIC_WORD)
 	{
 		//ошибка
 		ApplicationSqlErr(ERR_SQL_DB_ADDR);
@@ -700,7 +714,7 @@ void db_create(void *arg,...)
 
 	if(mode_create==MODE_CREATE)
 	{
-		if(*p!=NULL)
+		if((UINT32_T)*p!=(UINT32_T)NULL && (UINT32_T)*p!=MAGIC_WORD)
 		{
 			//проверям существует ли уже БД с подобным именем
 			err=db_GetDB(&addr,(UINT8_T*)*p);//db_FindByName(sector_GetZeroSeg(),&addr,(UINT8_T*)*p);
