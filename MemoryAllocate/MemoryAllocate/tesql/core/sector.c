@@ -71,9 +71,10 @@ UINT8_T ReadBlockLink(UINT8_T index, BlockLink *bl);
 SectorList *sl=NULL;	//описание секторов базы данных
 BlockLink *xStart=NULL;	//заголовки сегментов
 
-UINT8_T	start_index;
+UINT8_T	start_index;	//индек сектора start
 
 /*-----------------------------------------------------------*/
+//index - номер сектора
 UINT32_T sector_GetFreeSize(UINT8_T index)
 {
 	return sl->sector[index].FreeBytesRemaining;
@@ -81,6 +82,7 @@ UINT32_T sector_GetFreeSize(UINT8_T index)
 
 /*-----------------------------------------------------------*/
 #if (configUSE_SegmentCounter==TRUE)
+//index - номер сектора
 UINT32_T sector_GetSegmentCounter(UINT8_T index)
 {
 	return sl->sector[index].xSegmentCounter;
@@ -88,7 +90,8 @@ UINT32_T sector_GetSegmentCounter(UINT8_T index)
 #endif
 
 /*-----------------------------------------------------------*/
-//нужно учитывать выравнивание
+//count - колличество секторов
+//aligment - выравнивание сектора
 UINT8_T sector_Create(UINT8_T count,UINT8_T aligment)
 {
 	if(count==0)

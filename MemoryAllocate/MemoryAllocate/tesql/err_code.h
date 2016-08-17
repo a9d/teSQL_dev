@@ -33,6 +33,7 @@ extern "C" {
 #define ERR_DB_END				((UINT8_T)23) //
 #define ERR_NAME_LEN			((UINT8_T)24)
 #define ERR_DB_ADDR				((UINT8_T)25)//неправильный адрес бд
+#define ERR_WRONG_MODE			((UINT8_T)26)
 
 #ifdef  __cplusplus
 }

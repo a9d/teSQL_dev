@@ -4,7 +4,7 @@
 #include "portable.h"
 #include "core.h"
 
-#define MAGIC_WORD 0x87654321
+//#define MAGIC_WORD NULL//0x87654321
 
 extern void ApplicationSqlLockHook();
 extern void ApplicationSqlUnlockHook();
@@ -14,13 +14,14 @@ extern void ApplicationSqlUnlockHook();
 
 #define CREATE		LOCK;db_set_mode(1);
 #define DROP		LOCK;db_set_mode(0);
-#define SET
+#define SET			LOCK;db_set_mode(2);
 
 #define DATABASE	db_create(
-#define END			,MAGIC_WORD); UNLOCK;
+#define END			,NULL); UNLOCK;
 
 #define TABLE		db_create_tbl(
-#define ROWS		);db_create_tbl_rows(
+//#define ROWS		);db_create_tbl_rows(
+#define ROW		,NULL);db_create_tbl_row(
 
 #define SAVEDIN(N)	db_save_sector(N);
 
@@ -32,7 +33,7 @@ extern void ApplicationSqlUnlockHook();
 #define	INT64			0x0008
 #define FLOAT			0x0010
 #define DOUBLE			0x0020
-#define ARRAY(N,SIZE)	0x0040,N,SIZE,0x0040
+#define ARRAY(N,SIZE)	0x0040|(UINT16_T)N<<8,SIZE,0x0040
 
 #define NOT_NULL		| 0x0100
 #define AUTO_INCREMENT	| 0x0200

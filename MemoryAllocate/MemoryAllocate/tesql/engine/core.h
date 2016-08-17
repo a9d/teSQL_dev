@@ -16,10 +16,11 @@ extern "C" {
 
 void db_set_mode(UINT8_T mode);
 
-void db_create(void *arg,...);
+void db_create(void *db_link, void *arg,...);
 
-void db_create_tbl(void *arg,...);
-void db_create_tbl_rows(void *arg,...);
+void db_create_tbl(UINT8_T index, void *addr ,void *arg,...);
+//void db_create_tbl_rows(void *arg,...);
+void db_create_tbl_row(void *addr,void *name, UINT16_T param,...);
 
 //указать сектор для сохранения ТБ из РАМ
 void db_save_sector(UINT8_T index);

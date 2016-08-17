@@ -9,9 +9,11 @@
 
 #define MODE_DROPE  0
 #define MODE_CREATE 1
+#define MODE_SET	2
 
 UINT8_T mode_create;
-
+UINT32_T last_db;
+UINT32_T last_tbl;
 
 
 extern void ApplicationSqlErr(UINT8_T err);
@@ -139,6 +141,9 @@ UINT8_T DeleteDB(void *db_addr)
 				{
 					//удалить БД
 					err=db_record_del(rec);
+
+					//обнулить указатель на бд
+					memset(db_addr,0,rec->addrlen);
 				}
 			}
 		}
@@ -530,6 +535,10 @@ UINT8_T db_AddNewDB(void *db_addr,UINT8_T *name)
 
 				//возвращаем указатель на БД
 				memcpy(db_addr,&rec->addr_cur,rec->addrlen);
+
+				//копируем указатель на последнюю БД
+				//last_db=rec->addr_cur;
+
 				sector_RamFree(rec->data);
 			}
 			else
@@ -676,12 +685,16 @@ UINT8_T db_GetAllDB(void *db_link, UINT8_T *name,UINT8_T max_len)
 }
 
 
-void db_create_tbl(void *arg,...)
+void db_create_tbl(UINT8_T index, void *addr ,void *name,...)
 {
-	void **p=&arg;
+	//void **p=&arg;
 }
 
-void db_create_tbl_rows(void *arg,...)
+//void db_create_tbl_rows(void *arg,...)
+//{
+//}
+
+void db_create_tbl_row(void *addr,void *name, UINT16_T param,...)
 {
 }
 
@@ -689,7 +702,7 @@ void db_save_sector(UINT8_T index)
 {
 }
 
-void db_create(void *arg,...)
+void db_create(void *db_link, void *arg,...)
 {
 	void **p=&arg;
 
@@ -698,7 +711,7 @@ void db_create(void *arg,...)
 	UINT32_T addr=0;
 
 	//первый параметр это индекс базы данных
-	if(*p==NULL && (UINT32_T)*p==MAGIC_WORD)
+	if(db_link==NULL )
 	{
 		//ошибка
 		ApplicationSqlErr(ERR_SQL_DB_ADDR);
@@ -706,15 +719,15 @@ void db_create(void *arg,...)
 	}
 	else
 	{
-		db_addr=*p;
+		db_addr=db_link;
 	}
 
 	//переход к следующему параметру
-	p++;
+	//p++;
 
 	if(mode_create==MODE_CREATE)
 	{
-		if((UINT32_T)*p!=(UINT32_T)NULL && (UINT32_T)*p!=MAGIC_WORD)
+		if((UINT32_T)*p!=(UINT32_T)NULL)// && (UINT32_T)*p!=MAGIC_WORD)
 		{
 			//проверям существует ли уже БД с подобным именем
 			err=db_GetDB(&addr,(UINT8_T*)*p);//db_FindByName(sector_GetZeroSeg(),&addr,(UINT8_T*)*p);
@@ -726,6 +739,14 @@ void db_create(void *arg,...)
 			if(addr==0)
 			{
 				err=db_AddNewDB(db_addr,(UINT8_T*)*p);
+
+				//if(err==ERR_OK)
+				//{
+				//	//получаем длинну адреса
+				//	addr=sector_GetStartIndex();
+				//	addr=sector_GetAddrLen(addr);
+
+				//}
 			}
 			else
 			{
@@ -733,7 +754,7 @@ void db_create(void *arg,...)
 			}
 		}
 	}
-	else
+	else if(mode_create==MODE_DROPE)
 	{
 		//удаление только по номеру
 
@@ -744,11 +765,30 @@ void db_create(void *arg,...)
 		err=DeleteDB(db_addr);
 		
 	}
+	else if(mode_create==MODE_SET)
+	{
+		//last_db=0;
+	}
+	else
+	{
+		err=ERR_WRONG_MODE;
+	}
 
 
 	if(err!=ERR_OK)
 	{
 		ApplicationSqlErr(err);
+	}
+	else
+	{
+		//сохраняем указатель на последнюю бд
+		
+		//получаем длинну адреса
+		addr=sector_GetStartIndex();
+		addr=sector_GetAddrLen(addr);
+
+		last_db=0;
+		memcpy(&last_db,db_addr,addr);
 	}
 }
 

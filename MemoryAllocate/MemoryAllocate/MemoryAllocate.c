@@ -62,14 +62,41 @@ void ApplicationSqlErr(UINT8_T err)
 }
 
 
-//добавить функцию маллок с учетом выравнивани€ и функции read write с учетом выравнивани€
-//функцию корректироваки размера
 
-
-//добавить функцию получени€ нулевого адреса
-//добавить фунцию высокоуровнего чтени€/записи
 
 #define AVG(X) X,10
+
+
+
+//запись бд
+//next
+//prev
+//name link
+//table link
+
+//запись таблицы
+//next
+//prev
+//name link
+//row link
+//data link
+//flag
+//saved sector
+
+//запись row
+//next
+//prev
+//name link
+//tbl link
+//row config
+//data link offset
+
+//запись data
+//next
+//prev
+//size
+//data
+
 
 int _tmain(int argc, _TCHAR* argv[])
 {
@@ -84,8 +111,9 @@ int _tmain(int argc, _TCHAR* argv[])
 	UINT8_T buf1[20];
 
 	UINT16_T db_name=0;
-
-	UINT8_T len=strlen("test");
+	UINT16_T tb_name=0;
+	UINT16_T *tb_name1=0;
+	UINT16_T tb_row1=0;
 
 	//попробовать реализовать перегрузку использу€ функцию с неизвестным колличеством параметров
 	sector_Create(1,2);
@@ -102,13 +130,29 @@ int _tmain(int argc, _TCHAR* argv[])
 
 
 	//CREATE DATABASE &db_name,(UINT8_T*)"test" END;
+
+	//переделать под первый об€зательный параметр
 	CREATE DATABASE &db_name END;
-	//CREATE DATABASE &db_name,NULL END;
-	//CREATE DATABASE &db_name,"test" END;
-	//CREATE DATABASE &db_name,"test" END;
-	//CREATE DATABASE &db_name,"test1" END;
-	////
-	//CREATE DATABASE &db_name,"test1" END;
+
+	SET DATABASE &db_name END;
+	DROP DATABASE &db_name END;
+
+	CREATE DATABASE &db_name,NULL END;
+	CREATE DATABASE &db_name,"test" END;
+	CREATE DATABASE &db_name,"test" END;
+	CREATE DATABASE &db_name,"test1" END;
+
+	//тип
+	//ввести однозначное определение конца строки
+	SET DATABASE &db_name END;
+	tb_name=0;
+
+	CREATE TABLE 0,&tb_name ,"test" END;
+	
+	CREATE SAVEDIN(1) TABLE  0,&tb_name ,"test" ROW &tb_row1,"id", UNSIGNED INT8 PRIMARY_KEY
+												ROW &tb_row1,"id", UNSIGNED INT8 PRIMARY_KEY END;
+		//(&tb_row1,"id",UNSIGNED INT8 PRIMARY_KEY),
+		//											 (&tb_row1,"id1", ARRAY(0,100) NOT_NULL) END;
 
 
 	//db_GetDB(&db_name,(UINT8_T*)"test");
@@ -123,10 +167,10 @@ int _tmain(int argc, _TCHAR* argv[])
 	//db_GetDB(&db_name,(UINT8_T*)"test");
 
 	//CREATE DATABASE END;
-	DROP DATABASE &db_name END;
+	//DROP DATABASE &db_name END;
 
-	db_name=0;
-	db_GetDB(&db_name,(UINT8_T*)"test");
+	//db_name=0;
+	//db_GetDB(&db_name,(UINT8_T*)"test");
 	
 	//проверить ситуацию когда удал€етс€ только заголовок
 
@@ -138,6 +182,64 @@ int _tmain(int argc, _TCHAR* argv[])
 	//DELETE
 	//INSERT INTO 
 	//SELECT FROM WHERE
+	
+
+
+
+
+
+
+
+
+//	CREATE  TABLE  tbl_name [(create_definition,...)]
+//[table_options] [select_statement]
+//
+//create_definition:
+//  col_name type [NOT NULL | NULL] [DEFAULT default_value] [AUTO_INCREMENT]
+//            [PRIMARY KEY] [reference_definition]
+//  или   PRIMARY KEY (index_col_name,...)
+//  или   UNIQUE  [index_name] (index_col_name,...)
+//  или   FULLTEXT  [index_name] (index_col_name,...)
+//
+//type:
+//        TINYINT[(length)] [UNSIGNED] [ZEROFILL]
+//  или   SMALLINT[(length)] [UNSIGNED] [ZEROFILL]
+//  или   MEDIUMINT[(length)] [UNSIGNED] [ZEROFILL]
+//  или   INT[(length)] [UNSIGNED] [ZEROFILL]
+//  или   INTEGER[(length)] [UNSIGNED] [ZEROFILL]
+//  или   BIGINT[(length)] [UNSIGNED] [ZEROFILL]
+//  или   REAL[(length,decimals)] [UNSIGNED] [ZEROFILL]
+//  или   DOUBLE[(length,decimals)] [UNSIGNED] [ZEROFILL]
+//  или   FLOAT[(length,decimals)] [UNSIGNED] [ZEROFILL]
+//  или   DECIMAL(length,decimals) [UNSIGNED] [ZEROFILL]
+//  или   NUMERIC(length,decimals) [UNSIGNED] [ZEROFILL]
+//  или   CHAR(length) [BINARY]
+
+	//PRIMARY KEY - столбец уникален
+	//NULL по умолчанию
+	//CREATE TABLE name,"str name" ( row,"str row",type,NOT_NULL,DEFAULT, AUTO_INCREMENT,PRIMARY KEY UNIQUE)
+ 
+	//NOT_NULL-всегда инициализировать
+	//DEFAULT-значение по умолчанию
+	//AUTO_INCREMENT-только дл€ целых, числовых
+	//PRIMARY_KEY - уникальное значение, если два столбца, то уникальна€ строка
+	//UNIQUE	- уникальное значние
+	
+	//UNSIGNED
+
+	//INT8 8
+	//INT16 16
+	//INT32	32
+	//INT64	64
+	//FLOAT  4 byte 
+	//DOUBLE 8 byte
+	//ARRAY(size)
+
+
+	//SELECT FROM WHERE
+	//LIMIT 
+
+	//как уда€ть дубли??
 	
 
 
