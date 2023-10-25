@@ -16,8 +16,6 @@ extern "C" {
 #define SECTOR_CRC		0x20 //каждая запись имеет CRC16
 #define SECTOR_START	0x40 //информация о БД
 #define SECTOR_MAIN     0x80 //информация о секторах, если сектор еще и START то он используется в работе и не может быть расширен
-	
-#define SECTOR_MAIN_INDEX	0
 
 #define BYTES_1 0x01
 #define BYTES_2 0x02
@@ -35,11 +33,11 @@ typedef struct SECTOR_CONFIG
 {
 	UINT8_T	index;				//номер сектора
 	UINT8_T type;				//тип сектора
-	UINT8_T StartAddrLen;		//длина, в байтаз, поля адрес
+	UINT8_T StartAddrLen;		//длина, в байтах, поля адрес
 	UINT8_T SectorSizeLen;		//длина, в байтах, поля размер
+	UINT16_T ByteAligment;		//выравнивание сектора, в байтах
 	UINT32_T StartAddr;			//адрес начала сектора с учетом выравнивания
 	UINT32_T SectorSize;		//размер сектора с учетом выравнивания
-	UINT8_T ByteAligment;		//смещение в секторе
 }SectorConfig;
 
 #ifdef  __cplusplus

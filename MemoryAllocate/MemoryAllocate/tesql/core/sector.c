@@ -12,13 +12,13 @@ typedef struct A_SECTOR_INFO
 		UINT8_T  StartAddrLen;			//длина поля адреса
 		UINT8_T	 SectorSizeLen;			//длина поля размер
 		UINT8_T  Type;					//тип сектора
-		UINT8_T  bl_size;				//длина структуры блок линк с учетом выравнивания
-		UINT8_T  ByteAligment;			//выравнивание ,всегда больше нуля
+		UINT16_T  bl_size;				//размер структуры блок линк с учетом выравнивания
+		UINT16_T  ByteAligment;			//выравнивание сектора
 		UINT32_T StartAddr;				//смещение на сектор
 		UINT32_T FreeBytesRemaining;	//колличество свободных байт
 
 		#if (configUSE_SegmentCounter==TRUE)
-		UINT32_T xSegmentCounter;		//колличество сегментов
+		UINT32_T xSegmentCounter;		//колличество сегментов,используется для отладки
 		#endif
 
 		UINT32_T xStart_Addr;			//указатель на голову
@@ -29,8 +29,7 @@ typedef struct A_SECTOR_INFO
 typedef struct SECTOR_LIST
 {
 	UINT16_T	crc16;				//генерить перед сохранением
-	UINT8_T		sector_counter;		//колличество секторов
-	UINT8_T		crc;				//инвертированное поле sector_counter
+	UINT16_T	sector_counter;		//колличество секторов
 	
 	struct A_SECTOR_INFO *sector;	//список секторов
 }SectorList;
@@ -91,21 +90,19 @@ UINT32_T sector_GetSegmentCounter(UINT8_T index)
 
 /*-----------------------------------------------------------*/
 //count - колличество секторов
-//aligment - выравнивание сектора
-UINT8_T sector_Create(UINT8_T count,UINT8_T aligment)
+UINT8_T sector_Create(UINT8_T count)
 {
 	if(count==0)
 		return ERR_WRONG_INDEX;
 
-	sl=(SectorList*)local_malloc(sizeof(SectorList)); //размер структуры с описанием секторов
+	//выделение памяти под список секторов
+	sl=(SectorList*)local_malloc(sizeof(SectorList));
 	if(sl==NULL)
 		return ERR_LOCAL_MALLOC;
 
 	memset((void*)sl,0x00,sizeof(SectorList));
 
-	//с учетом выравнивания памяти сектора
-	//sl->sector=(SectorInfo*)local_malloc((sizeof(SectorInfo)*count+(aligment-1)) &  ~(aligment-1));
-	sl->sector=(SectorInfo*)local_malloc(sector_aligment(aligment, sizeof(SectorInfo)*count));
+	sl->sector=(SectorInfo*)local_malloc(sizeof(SectorInfo)*count);
 	if(sl->sector==NULL)
 	{
 		local_free((void*)sl);
@@ -114,7 +111,9 @@ UINT8_T sector_Create(UINT8_T count,UINT8_T aligment)
 	}
 
 	memset((void*)sl->sector,0x00,sizeof(SectorInfo)*count);
+	sl->sector_counter = count;
 
+	//выделение памяти под буфер описания сегментов
 	xStart=(BlockLink*)local_malloc(sizeof(BlockLink));
 	if( (xStart==NULL) )
 	{
@@ -124,10 +123,7 @@ UINT8_T sector_Create(UINT8_T count,UINT8_T aligment)
 		return ERR_LOCAL_MALLOC;
 	}
 
-	sl->sector_counter=count;
-
 	ApplicationSectorPrepareHook();
-	
 	return ERR_OK;
 }
 
@@ -162,8 +158,6 @@ UINT8_T	sector_ConfigCheck(SectorConfig* config)
 	}
 
 	//выравнивание адреса
-	//config->StartAddr+=(config->ByteAligment - 1);
-	//config->StartAddr&=~(config->ByteAligment - 1);
 	config->StartAddr=sector_aligment(config->ByteAligment,config->StartAddr);
 
 	//выравнивание размера
@@ -198,11 +192,8 @@ UINT8_T sector_MainSave()
 	if((sl->sector[SECTOR_MAIN_INDEX].Type & 0x0F)!=SECTOR_FREE)
 	{
 		//сгенерировать CRC16
-		sl->crc=~sl->sector_counter;
-
 		Crc16_Clear();
-		Crc16((UINT8_T*)&sl->sector_counter,sizeof(UINT8_T));
-		Crc16((UINT8_T*)&sl->crc,sizeof(UINT8_T));
+		Crc16((UINT8_T*)&sl->sector_counter,sizeof(UINT16_T));
 		sl->crc16=Crc16((UINT8_T*)sl->sector, (sizeof(SectorInfo)*sl->sector_counter) );		
 
 		//размер структуры с учетом выравнивания
@@ -280,7 +271,7 @@ UINT8_T sector_GetSectorConfig(UINT8_T index, SectorConfig* config)
 UINT8_T sector_Insert(SectorConfig* config)
 {
 	UINT32_T addr;
-	UINT16_T size;
+	UINT32_T size;
 	UINT16_T crc;
 	UINT8_T	 err;
 	UINT8_T  *buf=NULL;
@@ -297,43 +288,45 @@ UINT8_T sector_Insert(SectorConfig* config)
 		sl->sector[config->index].SectorSizeLen=config->SectorSizeLen;
 		sl->sector[config->index].Type=config->type;
 
-		//size=config->StartAddrLen + config->SectorSizeLen + (config->ByteAligment-1);
-		//if((config->type & SECTOR_CRC)>0)
-		//	size+=sizeof(UINT16_T);
-
-		//size&=~(config->ByteAligment-1);
-
+		//расчитваем размер блок линка
 		size=config->StartAddrLen + config->SectorSizeLen;
 		if((config->type & SECTOR_CRC)>0)
 			size+=sizeof(UINT16_T);
 
+		//учитываем выравнивание сектора
 		size=sector_aligment(config->ByteAligment,size);
 
 		sl->sector[config->index].bl_size=(UINT8_T)size;
-
 		sl->sector[config->index].StartAddr=config->StartAddr;
 		sl->sector[config->index].xStart_Addr=config->StartAddr;
 		sl->sector[config->index].FreeBytesRemaining=config->SectorSize;
 		sl->sector[config->index].ByteAligment=config->ByteAligment;
 
-
-		//если сектор обычный ничего не коректировать
-		if(config->index == SECTOR_MAIN_INDEX)
+		if (config->index == SECTOR_MAIN_INDEX) //сектор в котором хранится информация о всех секторах
 		{
-			//с учетом выравнивания данного сектора!!!
-			//size=((sizeof(SectorList)-sizeof(SectorInfo*))+( config->ByteAligment-1)) & ~(config->ByteAligment-1);
-			//size+=((sizeof(SectorInfo)*sl->sector_counter)+( config->ByteAligment-1)) & ~(config->ByteAligment-1);
-			size=(sizeof(SectorList)-sizeof(SectorInfo*));
-			size=sector_aligment(config->ByteAligment,size);
-			size+=(sizeof(SectorInfo)*sl->sector_counter);
-			size=sector_aligment(config->ByteAligment,size);
+			size = sizeof(sl->sector->StartAddrLen);
+			size += sizeof(sl->sector->SectorSizeLen);
+			size += sizeof(sl->sector->Type);
+			size += sizeof(sl->sector->bl_size);
+			size += sizeof(sl->sector->ByteAligment);
+			size += sizeof(sl->sector->StartAddr);
+			size += sizeof(sl->sector->FreeBytesRemaining);
+			#if (configUSE_SegmentCounter==TRUE)
+			size += sizeof(sl->sector->xSegmentCounter);
+			#endif
+			size += sizeof(sl->sector->xStart_Addr);
+			size += sizeof(sl->sector->pxEnd_Addr);
+			size *= sl->sector_counter;
+
+			size += sizeof(sl->crc16);
+			size += sizeof(sl->sector_counter);
+			size = sector_aligment(config->ByteAligment, size);
 
 			//если сектор только SECTOR_MAIN, скоректировать FreeBytesRemaining
 			if(config->SectorSize < size)
 				return ERR_NO_FREE_SPACE;
-
+			//?????
 			sl->sector[config->index].FreeBytesRemaining=config->SectorSize-size;
-
 			sl->sector[config->index].pxEnd_Addr=config->SectorSize - sl->sector[config->index].bl_size;
 
 			if((config->type & SECTOR_START)>0)
@@ -362,8 +355,6 @@ UINT8_T sector_Insert(SectorConfig* config)
 				if((config->type & SECTOR_CRC)>0)
 					size+=sizeof(UINT16_T);
 
-				//size+=( config->ByteAligment-1);
-				//size&=~(config->ByteAligment-1);
 				size=sector_aligment(config->ByteAligment,size);
 
 				err=sector_Malloc(config->index,&addr,size);
@@ -421,10 +412,7 @@ UINT8_T sector_Init(UINT8_T index)
 
 	if( ( ulAddress & (sl->sector[index].ByteAligment-1) ) != 0 )
 	{
-		//ulAddress += sl->sector[index].ByteAligment-1 ;
-		//ulAddress &=  ~( ( UINT32_T ) (sl->sector[index].ByteAligment-1) );
 		ulAddress=sector_aligment(sl->sector[index].ByteAligment,ulAddress);
-
 		xTotalHeapSize -= ulAddress - sl->sector[index].xStart_Addr;
 	}
 
@@ -945,21 +933,17 @@ UINT8_T sector_AddNewSector(SectorConfig* config)
 }
 
 /*-----------------------------------------------------------*/
-UINT8_T sector_Open(UINT32_T addr,UINT8_T aligment)
+UINT8_T sector_Open(UINT32_T addr)
 {
 	UINT16_T size;
 	UINT8_T	err=ERR_OK;
 	SectorList *header=NULL;
 	UINT8_T i;
 
-	//подготовить
-	if(aligment==0)
-		return ERR_WRONG_ALIGMENT;
-
 	ApplicationSectorPrepareHook();
 
 	//size=(sizeof(SectorList)+(aligment-1)) & ~(aligment-1);
-	size=sector_aligment(aligment,sizeof(SectorList));
+	size=sector_aligment(RAM_ALIGMENT,sizeof(SectorList));
 	header=(SectorList*)local_malloc( size );
 
 	if(header==NULL)
@@ -967,20 +951,21 @@ UINT8_T sector_Open(UINT32_T addr,UINT8_T aligment)
 
 	//чтение заголовка. Учитываем выравнивание
 	//size=(sizeof(SectorList)-sizeof(SectorInfo*)+(aligment-1)) & ~(aligment-1);
-	size=sector_aligment(aligment,(sizeof(SectorList)-sizeof(SectorInfo*)));
+	size=sector_aligment(RAM_ALIGMENT,(sizeof(SectorList)-sizeof(SectorInfo*)));
 	err=local_read(SECTOR_MAIN_INDEX, addr, (void*)header, size);
 
 	if(err==ERR_OK)
 	{
 		i=~header->sector_counter;
-		if(i == header->crc)
+		//if(i == header->crc)
 		{
 			//создание структур
-			err=sector_Create(header->sector_counter,aligment);
+			err=sector_Create(header->sector_counter);
 
 			if(err==ERR_OK)
 			{
-				err=local_read(SECTOR_MAIN_INDEX, (addr+size), (void*)sl->sector, (sizeof(SectorInfo)*sl->sector_counter + (aligment-1)) & ~(aligment-1) );
+				//!!!!!!!!!
+				err=local_read(SECTOR_MAIN_INDEX, (addr+size), (void*)sl->sector, (sizeof(SectorInfo)*sl->sector_counter + (RAM_ALIGMENT-1)) & ~(RAM_ALIGMENT-1) );
 
 				if(err!=ERR_OK)
 				{
@@ -988,11 +973,9 @@ UINT8_T sector_Open(UINT32_T addr,UINT8_T aligment)
 				}
 				else
 				{
-					sl->crc=header->crc;
 					//проверка CRC16
 					Crc16_Clear();
-					Crc16((UINT8_T*)&sl->sector_counter,sizeof(UINT8_T));
-					Crc16((UINT8_T*)&sl->crc,sizeof(UINT8_T));
+					Crc16((UINT8_T*)&sl->sector_counter,sizeof(UINT16_T));
 					sl->crc16=Crc16((UINT8_T*)sl->sector,sizeof(SectorInfo)*sl->sector_counter);
 
 					if(header->crc16!=sl->crc16)
@@ -1017,10 +1000,10 @@ UINT8_T sector_Open(UINT32_T addr,UINT8_T aligment)
 				}
 			}
 		}
-		else
-		{
-			err=ERR_CRC;
-		}
+		//else
+		//{
+		//	err=ERR_CRC;
+		//}
 	}
 
 	local_free(header);
@@ -1056,7 +1039,7 @@ UINT8_T	sector_GetStartIndex()
 	return start_index;
 }
 
-UINT32_T sector_aligment(UINT8_T aligment,UINT32_T size)
+UINT32_T sector_aligment(UINT32_T aligment,UINT32_T size)
 {
 	return ((size+(aligment-1))&~(aligment-1));
 }

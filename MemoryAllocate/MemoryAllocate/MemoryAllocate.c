@@ -1,5 +1,3 @@
-// MemoryAllocate.cpp: определяет точку входа для консольного приложения.
-//
 #include <stdio.h>
 #include <tchar.h>
 
@@ -11,14 +9,13 @@
 
 #include "sql.h"
 
-
 #include <stdio.h>
 #include <stdarg.h>
 #include <math.h>
 #include <string.h>
 
-extern UINT8_T ucHeap[2048];
-extern UINT8_T ucHeap1[2048];
+extern UINT8_T ucHeap[100];
+//extern UINT8_T ucHeap1[2048];
 
 void ApplicationSectorPrepareHook(void)
 {
@@ -42,12 +39,9 @@ void ApplicationSectorCloseHook(UINT8_T index, UINT32_T start_addr, UINT32_T siz
 
 void ApplicationSectorСlosingHook( void )
 {
+	//завершение работы
 }
 
-
-
-
-//разработать функции конвертации чисел в массив и обратно
 void ApplicationSqlLockHook()
 {
 }
@@ -56,17 +50,11 @@ void ApplicationSqlUnlockHook()
 {
 }
 
-
 void ApplicationSqlErr(UINT8_T err)
 {
 }
 
-
-
-
-#define AVG(X) X,10
-
-
+//#define AVG(X) X,10
 
 //запись бд
 //next
@@ -100,57 +88,76 @@ void ApplicationSqlErr(UINT8_T err)
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-	int i;
-	int size;
 	SectorConfig config;
-	UINT32_T test;
-	UINT32_T addr1,addr2,addr3,addr4,addr5;
-	UINT8_T buf[]={1,2,3,4,5,6};
-	UINT32_T addr11;
-	UINT8_T y;
-	UINT8_T buf1[20];
+	//создание секторовы, веделение памяти под структуры
+	sector_Create(1);
 
-	UINT16_T db_name=0;
-	UINT16_T tb_name=0;
-	UINT16_T *tb_name1=0;
-	UINT16_T tb_row1=0;
-
-	//попробовать реализовать перегрузку используя функцию с неизвестным колличеством параметров
-	sector_Create(1,2);
-
-    config.index=0;
+	config.index=0;
 	config.type=(SECTOR_START|SECTOR_CRC|SECTOR_FLASH);
-	config.ByteAligment=2;
+	config.ByteAligment=1;
 	config.StartAddr=0;
-	config.StartAddrLen=BYTES_2;
-	config.SectorSize=2000;
-	config.SectorSizeLen=BYTES_2;
-	sector_ConfigCheck(&config);
+	config.StartAddrLen= BYTES_1;
+	config.SectorSize=100;
+	config.SectorSizeLen= BYTES_1;
+	//sector_ConfigCheck(&config);
 	sector_Insert(&config);
 
+	//проблема выравнивания!!!
+	//структуры с выравниванием 2 и 4 весят по разному и будет проблема если открыть в другом микроконтроллере
+	//sector_Open(0);
 
-	//CREATE DATABASE &db_name,(UINT8_T*)"test" END;
+	return 0;
+	//int i;
+	//int size;
+	//SectorConfig config;
+	//UINT32_T test;
+	//UINT32_T addr1,addr2,addr3,addr4,addr5;
+	//UINT8_T buf[]={1,2,3,4,5,6};
+	//UINT32_T addr11;
+	//UINT8_T y;
+	//UINT8_T buf1[20];
 
-	//переделать под первый обязательный параметр
-	CREATE DATABASE &db_name END;
+	//UINT16_T db_name=0;
+	//UINT16_T tb_name=0;
+	//UINT16_T *tb_name1=0;
+	//UINT16_T tb_row1=0;
 
-	SET DATABASE &db_name END;
-	DROP DATABASE &db_name END;
+	////попробовать реализовать перегрузку используя функцию с неизвестным колличеством параметров
+	//sector_Create(1,2);
 
-	CREATE DATABASE &db_name,NULL END;
-	CREATE DATABASE &db_name,"test" END;
-	CREATE DATABASE &db_name,"test" END;
-	CREATE DATABASE &db_name,"test1" END;
+ //   config.index=0;
+	//config.type=(SECTOR_START|SECTOR_CRC|SECTOR_FLASH);
+	//config.ByteAligment=2;
+	//config.StartAddr=0;
+	//config.StartAddrLen=BYTES_2;
+	//config.SectorSize=2000;
+	//config.SectorSizeLen=BYTES_2;
+	//sector_ConfigCheck(&config);
+	//sector_Insert(&config);
 
-	//тип
-	//ввести однозначное определение конца строки
-	SET DATABASE &db_name END;
-	tb_name=0;
 
-	CREATE TABLE 0,&tb_name ,"test" END;
-	
-	CREATE SAVEDIN(1) TABLE  0,&tb_name ,"test" ROW &tb_row1,"id", UNSIGNED INT8 PRIMARY_KEY
-												ROW &tb_row1,"id", UNSIGNED INT8 PRIMARY_KEY END;
+	////CREATE DATABASE &db_name,(UINT8_T*)"test" END;
+
+	////переделать под первый обязательный параметр
+	//CREATE DATABASE &db_name END;
+
+	//SET DATABASE &db_name END;
+	//DROP DATABASE &db_name END;
+
+	//CREATE DATABASE &db_name,NULL END;
+	//CREATE DATABASE &db_name,"test" END;
+	//CREATE DATABASE &db_name,"test" END;
+	//CREATE DATABASE &db_name,"test1" END;
+
+	////тип
+	////ввести однозначное определение конца строки
+	//SET DATABASE &db_name END;
+	//tb_name=0;
+
+	//CREATE TABLE 0,&tb_name ,"test" END;
+	//
+	//CREATE SAVEDIN(1) TABLE  0,&tb_name ,"test" ROW &tb_row1,"id", UNSIGNED INT8 PRIMARY_KEY
+	//											ROW &tb_row1,"id", UNSIGNED INT8 PRIMARY_KEY END;
 		//(&tb_row1,"id",UNSIGNED INT8 PRIMARY_KEY),
 		//											 (&tb_row1,"id1", ARRAY(0,100) NOT_NULL) END;
 
