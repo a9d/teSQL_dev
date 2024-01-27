@@ -97,65 +97,66 @@ void db_set_mode(UINT8_T mode)
 
 UINT8_T DeleteDB(void *db_addr)
 {
-	UINT8_T err;
-	DB_Record *rec=NULL;
-	UINT32_T name_addr;
+	return 0;
+	//UINT8_T err;
+	//DB_Record *rec=NULL;
+	//UINT32_T name_addr;
 
-	//удаление всех записей
-	//удаление всех таблиц
+	////удаление всех записей
+	////удаление всех таблиц
 
-	//удаление БД
-	rec=(DB_Record*)local_malloc(sizeof(DB_Record));
-	if(rec!=NULL)
-	{
-		memset(rec,0x00,sizeof(DB_Record));
+	////удаление БД
+	//rec=(DB_Record*)local_malloc(sizeof(DB_Record));
+	//if(rec!=NULL)
+	//{
+	//	memset(rec,0x00,sizeof(DB_Record));
 
-		rec->index=sector_GetStartIndex();
-		rec->addrlen=sector_GetAddrLen(rec->index);	
-		memcpy(&rec->addr_cur,db_addr,rec->addrlen);
+	//	rec->index=sector_GetStartIndex();
+	//	rec->addrlen=sector_GetAddrLen(rec->index);	
+	//	memcpy(&rec->addr_cur,db_addr,rec->addrlen);
 
-		//нулевой сегмент удалться нельзя
-		if(rec->addr_cur==(UINT32_T)NULL || rec->addr_cur==sector_GetZeroSeg())
-		{
-			err=ERR_DB_ADDR;
-		}
-		else
-		{
-			err=db_record_cur(rec);
+	//	//нулевой сегмент удалться нельзя
+	//	if(rec->addr_cur==(UINT32_T)NULL || rec->addr_cur==sector_GetZeroSeg())
+	//	{
+	//		err=ERR_DB_ADDR;
+	//	}
+	//	else
+	//	{
+	//		err=db_record_cur(rec);
 
-			if(err==ERR_OK)
-			{
-				//проверить наличие имени
-				name_addr=0;
-				memcpy(&name_addr,rec->data+rec->addrlen*2,rec->addrlen);
+	//		if(err==ERR_OK)
+	//		{
+	//			//проверить наличие имени
+	//			name_addr=0;
+	//			memcpy(&name_addr,rec->data+rec->addrlen*2,rec->addrlen);
 
-				if(name_addr!=0)
-				{
-					//удалить сегмент с именем
-					err=sector_Free(rec->index,name_addr);
-				}
+	//			if(name_addr!=0)
+	//			{
+	//				//удалить сегмент с именем
+	//				err=sector_Free(rec->index,name_addr);
+	//			}
 
-				local_free(rec->data);
-			
-				if(err==ERR_OK)
-				{
-					//удалить БД
-					err=db_record_del(rec);
+	//			local_free(rec->data);
+	//		
+	//			if(err==ERR_OK)
+	//			{
+	//				//удалить БД
+	//				err=db_record_del(rec);
 
-					//обнулить указатель на бд
-					memset(db_addr,0,rec->addrlen);
-				}
-			}
-		}
+	//				//обнулить указатель на бд
+	//				memset(db_addr,0,rec->addrlen);
+	//			}
+	//		}
+	//	}
 
-		local_free(rec);
-	}
-	else
-	{
-		err=ERR_LOCAL_MALLOC;
-	}
+	//	local_free(rec);
+	//}
+	//else
+	//{
+	//	err=ERR_LOCAL_MALLOC;
+	//}
 
-	return err;
+	//return err;
 }
 
 //индекс сектора

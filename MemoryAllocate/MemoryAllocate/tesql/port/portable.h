@@ -1,13 +1,5 @@
-#ifndef _PORTABLE
-#define _PORTABLE
-
-#define SECTOR_MAIN_INDEX	0	//номер сектора в котором хранится информация о секторах
-
-#define RAM_ALIGMENT 2	//выравнивание RAM микроконтроллера,нет
-
-//SECTOR NAME
-#define SECTOR_RAM_0 0
-#define SECTOR_RAM_1 1
+#ifndef SQL_PORTABLE
+#define SQL_PORTABLE
 
 //TYPEDEF
 typedef unsigned __int8		UINT8_T;
