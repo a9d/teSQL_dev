@@ -6,8 +6,10 @@
 #include "err_code.h"
 #include "table.h"
 
-#define MEM_SIZE 50
+
+#define MEM_SIZE 1000
 UINT8_T ucHeap[MEM_SIZE];
+
 
 /*-----------------------------------------------------------*/
 void MySectorInit()
@@ -39,28 +41,35 @@ UINT8_T local_read(UINT32_T addr, void *data, UINT32_T size)
 int _tmain(int argc, _TCHAR* argv[])
 {
 	TableInfo myTable;
-	UINT32_T addr, addr1, addr2, addr_get,size;
+	UINT32_T addr, addr1, addr2, addr3, addr4, addr5, size;
 	UINT8_T err = ERR_OK;
 
 	MySectorInit();	//инициализация сектора
 	
-	//добавить фуенкцию Flash
+	table_Init(&myTable, 4, 4, 4, 0, MEM_SIZE, local_read, local_write, NULL);
 
-	table_Init(&myTable, 2, 2, 1, 0, MEM_SIZE, local_read, local_write, NULL);
-	table_Malloc(&myTable, &addr, 20);
-	table_Malloc(&myTable, &addr1, 5);
-	table_Malloc(&myTable, &addr2, 10); 
-	
-	//addr_get = myTable.bl_size;
-	//while (addr_get < myTable.EndAddr)
-	//{
-	//	table_GetAddr(&myTable, &addr_get);
-	//}
+	table_Malloc(&myTable, &addr, 10);
+	table_Malloc(&myTable, &addr1, 20);
+	table_Malloc(&myTable, &addr2, 30);
+	table_Malloc(&myTable, &addr3, 40);
+	table_Malloc(&myTable, &addr4, 50);
 
-	//table_Free(&myTable, addr);
-	//table_GetSegmentSize(&myTable, addr, &size);
-	//table_GetSegmentSize(&myTable, addr1, &size);
-	//table_GetSegmentSize(&myTable, addr2, &size);
+	table_Malloc(&myTable, &addr5, myTable.FreeBytesRemaining - myTable.bl_size);
+
+	table_Free(&myTable, addr);
+	table_Free(&myTable, addr2);
+	table_Free(&myTable, addr3);
+
+	table_Malloc(&myTable, &addr, 39);
+	table_Malloc(&myTable, &addr3, 5);
+
+	table_Free(&myTable, addr);
+	table_Free(&myTable, addr1);
+	table_Free(&myTable, addr3);
+	table_Free(&myTable, addr4);
+	table_Free(&myTable, addr5);
+
+	//table_Flash(&myTable);
 
 	return 0;
 }
