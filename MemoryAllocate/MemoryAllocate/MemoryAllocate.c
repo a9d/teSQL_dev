@@ -6,6 +6,7 @@
 #include "err_code.h"
 #include "table.h"
 
+#include "8to7.h"
 
 #define MEM_SIZE 1000
 UINT8_T ucHeap[MEM_SIZE];
@@ -44,9 +45,21 @@ int _tmain(int argc, _TCHAR* argv[])
 	UINT32_T addr, addr1, addr2, addr3, addr4, addr5, size;
 	UINT8_T err = ERR_OK;
 
+	//0x12345678
+	UINT8_T test[10] = { 0x12, 0x34, 0x56, 0x78, 0x82, 0x01, 0, 0, 0, 0 };// { 0x80, 0xC0, 0xA0, 0x90, 0x88, 0x00, 0, 0, 0, 0 };
+	UINT8_T out[10] = { 0 };
+	UINT8_T out1[10] = { 0 };
+	
+	EightToSeven(test, out, 10);
+	SevenToEight(out, out1, 10);
+	
+
+	return 0;
+	//каждый занятый байт отмечен старшим битом
+
 	MySectorInit();	//инициализация сектора
 	
-	table_Init(&myTable, 4, 4, 4, 0, MEM_SIZE, local_read, local_write, NULL);
+	table_Init(&myTable, 4, 4, 4, 0, MEM_SIZE, local_read, local_write, Crc16);
 
 	table_Malloc(&myTable, &addr, 10);
 	table_Malloc(&myTable, &addr1, 20);
@@ -68,8 +81,6 @@ int _tmain(int argc, _TCHAR* argv[])
 	table_Free(&myTable, addr3);
 	table_Free(&myTable, addr4);
 	table_Free(&myTable, addr5);
-
-	//table_Flash(&myTable);
 
 	return 0;
 }

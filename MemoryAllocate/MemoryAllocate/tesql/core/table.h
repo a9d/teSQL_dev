@@ -53,10 +53,10 @@ UINT32_T table_GetStartAdd(TableInfo* tab_ptr);
 UINT32_T table_GetEndAdd(TableInfo* tab_ptr);
 
 //UINT8_T table_GetAddr(TableInfo* tab_ptr, UINT32_T* addr);
-UINT8_T table_Flash(TableInfo* tab_ptr);
+//UINT8_T table_Flash(TableInfo* tab_ptr);
 
-UINT8_T	table_Write(TableInfo *tab_ptr, UINT32_T addr, void *data, UINT16_T size);
-UINT8_T	table_Read(TableInfo *tab_ptr, UINT32_T addr, void *data, UINT16_T size);
+//UINT8_T	table_Write(TableInfo *tab_ptr, UINT32_T addr, void *data, UINT16_T size);
+//UINT8_T	table_Read(TableInfo *tab_ptr, UINT32_T addr, void *data, UINT16_T size);
 
 #ifdef  __cplusplus
 }

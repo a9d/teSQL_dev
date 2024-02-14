@@ -41,6 +41,8 @@ extern "C" {
 #define ERR_NO_WRITE_FUNCTION	((UINT8_T)31)
 #define ERR_READ				((UINT8_T)32)
 #define ERR_WRITE				((UINT8_T)33)
+#define ERR_NO_CRC_FUNCTION		((UINT8_T)34)
+#define ERR_NOT_INIT			((UINT8_T)35)
 
 #ifdef  __cplusplus
 }

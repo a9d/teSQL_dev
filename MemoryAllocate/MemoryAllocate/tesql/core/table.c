@@ -55,6 +55,10 @@ UINT8_T table_Init(TableInfo* tab_ptr,
 	write_t Write,
 	crc_t Crc)
 {
+	UINT8_T	err = ERR_OK;
+	UINT16_T integerPart = 0;
+	UINT16_T remainder = 0;
+
 	if (tab_ptr == NULL)
 		return ERR_TABLE_NULL;
 
@@ -92,13 +96,20 @@ UINT8_T table_Init(TableInfo* tab_ptr,
 	else
 		tab_ptr->write = Write;
 
-	tab_ptr->crc = Crc;
+	if (Crc == NULL)
+		return ERR_NO_CRC_FUNCTION;
+	else
+		tab_ptr->crc = Crc;
 
 	//расчитваем размер блок линка
-	tab_ptr->bl_size = tab_ptr->StartAddrLen + tab_ptr->TableSizeLen;
-	if(tab_ptr->crc != NULL)
-		tab_ptr->bl_size += sizeof(UINT16_T);
-	//учитываем выравнивание сектора
+	tab_ptr->bl_size = sizeof(UINT8_T) + tab_ptr->StartAddrLen + tab_ptr->TableSizeLen + sizeof(UINT16_T);
+	//Старший бит, бит занятости
+	integerPart = (tab_ptr->bl_size - sizeof(UINT8_T)) / 8;
+	remainder = (tab_ptr->bl_size - sizeof(UINT8_T)) % 8;
+	if (remainder > 0)
+		integerPart++;
+	tab_ptr->bl_size += integerPart; //вносим коррекцию
+	
 	tab_ptr->bl_size = memory_aligment(tab_ptr->ByteAligment, tab_ptr->bl_size);
 
 	tab_ptr->FreeBytesRemaining = tab_ptr->EndAddr - tab_ptr->StartAddr;
@@ -107,7 +118,11 @@ UINT8_T table_Init(TableInfo* tab_ptr,
 	tab_ptr->xSegmentCounter = 0;
 #endif
 
-	return memory_init(tab_ptr);
+	err = memory_init(tab_ptr);
+	if (err != ERR_OK)
+		tab_ptr->bl_size = 0;
+
+	return err;
 }
 
 UINT32_T memory_aligment(UINT32_T aligment,UINT32_T size)
@@ -120,7 +135,6 @@ UINT8_T	memory_init(TableInfo* tab_ptr)
 	BlockLink	pxFirstFreeBlock;
 	BlockLink	pxEnd;
 	BlockLink	xStart;
-	//UINT32_T	xTotalHeapSize;
 	UINT8_T		err = ERR_OK;
 
 	xStart.pxCurrentAddr = 0;
@@ -145,8 +159,6 @@ UINT8_T	memory_init(TableInfo* tab_ptr)
 	if(err == ERR_OK)
 	{
 		tab_ptr->FreeBytesRemaining -= tab_ptr->bl_size;
-		//tab_ptr->HeadAddr = xStart.body.pxNextFreeBlock;
-		//xTotalHeapSize = tab_ptr->FreeBytesRemaining - tab_ptr->bl_size;
 
 		/* pxEnd is used to mark the end of the list of free blocks and is inserted
 		at the end of the heap space. */
@@ -199,6 +211,7 @@ UINT32_T table_GetFreeSize(TableInfo* tab_ptr)
 /*-----------------------------------------------------------*/
 UINT8_T WriteBlockLink(TableInfo* tab_ptr, BlockLink *bl)
 {
+	UINT16_T shift;
 	UINT16_T crc;
 	UINT8_T	*buf;
 	UINT8_T	err = ERR_OK;
@@ -211,15 +224,31 @@ UINT8_T WriteBlockLink(TableInfo* tab_ptr, BlockLink *bl)
 	memset((void*)buf, 0x00, tab_ptr->bl_size);
 
 	//сформировать пакет для записи и сгенерить crc16 если требуется
-	memcpy((void*)buf,(void*)&bl->body.pxNextFreeBlock, tab_ptr->StartAddrLen);
-	memcpy((void*)(buf + tab_ptr->StartAddrLen),(void*)&bl->body.xBlockSize, tab_ptr->TableSizeLen);
+	*buf = 0xFF; //начало блок линка
+	memcpy((void*)(buf + sizeof(UINT8_T)),(void*)&bl->body.pxNextFreeBlock, tab_ptr->StartAddrLen);
+	memcpy((void*)(buf + sizeof(UINT8_T) + tab_ptr->StartAddrLen),(void*)&bl->body.xBlockSize, tab_ptr->TableSizeLen);
 
-	if(tab_ptr->crc != NULL)
+	//if(tab_ptr->crc != NULL)
+	//{
+	crc = 0xFFFF;
+	crc = tab_ptr->crc(crc, (buf + sizeof(UINT8_T)), tab_ptr->StartAddrLen + tab_ptr->TableSizeLen);
+
+	memcpy((void*)(buf + sizeof(UINT8_T) + tab_ptr->StartAddrLen + tab_ptr->TableSizeLen),(void*)&crc,sizeof(UINT16_T));
+	//}
+
+	int i = 1;
+	int bit_count = (tab_ptr->StartAddrLen + tab_ptr->TableSizeLen + sizeof(UINT16_T)) * 8;
+
+	////выставить старший бит
+	//shift = 0;S
+	//int j = 0;
+	for (int j = 0; j < bit_count;)
 	{
-		crc = 0xFFFF;
-		crc = tab_ptr->crc(crc, buf, tab_ptr->StartAddrLen + tab_ptr->TableSizeLen);
+	//	shift |= *(buf + i);
+	//	shift <<= 7;
+	//	shift |= 0x8000;
 
-		memcpy((void*)(buf + tab_ptr->StartAddrLen + tab_ptr->TableSizeLen),(void*)&crc,sizeof(UINT16_T));
+	//	*(buf + i) = (UINT8_T)(shift >> 8);
 	}
 
 	err = tab_ptr->write(bl->pxCurrentAddr, (void*)buf, tab_ptr->bl_size);
@@ -249,25 +278,27 @@ UINT8_T ReadBlockLink(TableInfo* tab_ptr, BlockLink* bl)
 		return err;
 	}
 
+	//сбросить старший бит
+
 	//проверка CRC если требуется
-	if(tab_ptr->crc != NULL)
-	{
-		crc = 0xFFFF;
-		crc = tab_ptr->crc(crc, buf, tab_ptr->StartAddrLen + tab_ptr->TableSizeLen);
+	//if(tab_ptr->crc != NULL)
+	//{
+	crc = 0xFFFF;
+	crc = tab_ptr->crc(crc, (buf + sizeof(UINT8_T)), tab_ptr->StartAddrLen + tab_ptr->TableSizeLen);
 		
-		err = memcmp((void*)(buf + tab_ptr->StartAddrLen + tab_ptr->TableSizeLen),(void*)&crc,sizeof(UINT16_T));
-		if(err != 0x00)
-		{
-			local_free(buf);
-			return ERR_CRC;
-		}
+	err = memcmp((void*)(buf + sizeof(UINT8_T) + tab_ptr->StartAddrLen + tab_ptr->TableSizeLen),(void*)&crc,sizeof(UINT16_T));
+	if(err != 0x00)
+	{
+		local_free(buf);
+		return ERR_CRC;
 	}
+	//}
 
 	//загружаем в структуру
 	bl->body.pxNextFreeBlock = 0;
-	memcpy((void*)&bl->body.pxNextFreeBlock, (void*)buf, tab_ptr->StartAddrLen);
+	memcpy((void*)&bl->body.pxNextFreeBlock, (void*)(buf + sizeof(UINT8_T)), tab_ptr->StartAddrLen);
 	bl->body.xBlockSize = 0;
-	memcpy((void*)&bl->body.xBlockSize, (void*)(buf + tab_ptr->StartAddrLen), tab_ptr->TableSizeLen);
+	memcpy((void*)&bl->body.xBlockSize, (void*)(buf + sizeof(UINT8_T) + tab_ptr->StartAddrLen), tab_ptr->TableSizeLen);
 
 	return ERR_OK;
 }
@@ -294,7 +325,8 @@ UINT8_T	table_Malloc(TableInfo *tab_ptr, UINT32_T *addr, UINT32_T xWantedSize)
 	pxPreviousBlock.body.pxNextFreeBlock = 0;
 	pxPreviousBlock.body.xBlockSize = 0;
 
-	//добавить проверку инициализированна куча или нет
+	if (tab_ptr->bl_size == 0)
+		return ERR_NOT_INIT;
 
 	/* The wanted size is increased so it can contain a BlockLink_t
 	structure in addition to the requested amount of bytes. */
@@ -531,6 +563,9 @@ UINT8_T	table_Free(TableInfo* tab_ptr, UINT32_T pv )
 	pxLink.body.pxNextFreeBlock = 0;
 	pxLink.body.xBlockSize = 0;
 
+	if (tab_ptr->bl_size == 0)
+		return ERR_NOT_INIT;
+
 	if( pv != 0 )
 	{
 		/* The memory being freed will have an BlockLink_t structure immediately
@@ -598,19 +633,19 @@ UINT32_T table_GetEndAdd(TableInfo* tab_ptr)
 	return tab_ptr->EndAddr + tab_ptr->bl_size;
 }
 
-UINT8_T table_Flash(TableInfo* tab_ptr)
-{
-	BlockLink xStart;
-	UINT8_T err = ERR_OK;
-
-	xStart.pxCurrentAddr = tab_ptr->StartAddr;
-	//xStart.body.pxNextFreeBlock = tab_ptr->HeadAddr;
-	xStart.body.xBlockSize = 0;
-
-	err = WriteBlockLink(tab_ptr, &xStart);
-
-	return err;
-}
+//UINT8_T table_Flash(TableInfo* tab_ptr)
+//{
+//	BlockLink xStart;
+//	UINT8_T err = ERR_OK;
+//
+//	xStart.pxCurrentAddr = tab_ptr->StartAddr;
+//	//xStart.body.pxNextFreeBlock = tab_ptr->HeadAddr;
+//	xStart.body.xBlockSize = 0;
+//
+//	err = WriteBlockLink(tab_ptr, &xStart);
+//
+//	return err;
+//}
 
 //UINT8_T sector_read(UINT8_T index, UINT32_T addr, void *data, UINT16_T size)
 //{
