@@ -9,6 +9,8 @@
 extern "C" {
 #endif
 
+#define BLOCK_LINK_START 0x55
+
 typedef UINT8_T(*read_t)(UINT32_T addr, void* data, UINT32_T size);
 typedef UINT8_T(*write_t)(UINT32_T addr, void* data, UINT32_T size);
 typedef UINT16_T(*crc_t)(UINT16_T crc, UINT8_T* pcBlock, UINT16_T len);

@@ -12,17 +12,21 @@ UINT32_T SevenToEight(UINT8_T* in, UINT8_T* out, UINT32_T len)
 	{
 		c = in[n] & 0x7f;
 		c <<= shift;
+
 		w = in[n + 1] & 0x7f;
 		w >>= (7 - shift);
+
 		shift += 1;
 		c = c | w;
-		if (shift == 7)
+		
+		if (shift > 7)
 		{
-			shift = 0x01;
+			shift = 1;
 			n++;
 		}
 		out[m] = c;
 		m++;
+
 	}
 
 	for (int i = m; i < len; i++)

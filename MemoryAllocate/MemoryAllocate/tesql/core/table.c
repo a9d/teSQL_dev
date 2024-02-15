@@ -213,46 +213,37 @@ UINT8_T WriteBlockLink(TableInfo* tab_ptr, BlockLink *bl)
 {
 	UINT16_T shift;
 	UINT16_T crc;
-	UINT8_T	*buf;
+	UINT8_T	*buf,*buf7;
 	UINT8_T	err = ERR_OK;
 
 	buf = (UINT8_T*)local_malloc(tab_ptr->bl_size);
-
 	if(buf == NULL)
 		return ERR_LOCAL_MALLOC;
 
-	memset((void*)buf, 0x00, tab_ptr->bl_size);
+	buf7 = (UINT8_T*)local_malloc(tab_ptr->bl_size);
+	if (buf7 == NULL)
+	{
+		local_free(buf);
+		return ERR_LOCAL_MALLOC;
+	}
 
-	//сформировать пакет для записи и сгенерить crc16 если требуется
-	*buf = 0xFF; //начало блок линка
+	memset((void*)buf, 0x00, tab_ptr->bl_size);
+	memset((void*)buf7, 0x00, tab_ptr->bl_size);
+
+	//сформировать пакет для записи и сгенерить crc16
 	memcpy((void*)(buf + sizeof(UINT8_T)),(void*)&bl->body.pxNextFreeBlock, tab_ptr->StartAddrLen);
 	memcpy((void*)(buf + sizeof(UINT8_T) + tab_ptr->StartAddrLen),(void*)&bl->body.xBlockSize, tab_ptr->TableSizeLen);
 
-	//if(tab_ptr->crc != NULL)
-	//{
 	crc = 0xFFFF;
 	crc = tab_ptr->crc(crc, (buf + sizeof(UINT8_T)), tab_ptr->StartAddrLen + tab_ptr->TableSizeLen);
-
 	memcpy((void*)(buf + sizeof(UINT8_T) + tab_ptr->StartAddrLen + tab_ptr->TableSizeLen),(void*)&crc,sizeof(UINT16_T));
-	//}
+	
+	*buf7 = BLOCK_LINK_START; //начало блок линка
+	EightToSeven((buf + sizeof(UINT8_T)), (buf7 + sizeof(UINT8_T)), (tab_ptr->bl_size - sizeof(UINT8_T)));
 
-	int i = 1;
-	int bit_count = (tab_ptr->StartAddrLen + tab_ptr->TableSizeLen + sizeof(UINT16_T)) * 8;
+	err = tab_ptr->write(bl->pxCurrentAddr, (void*)buf7, tab_ptr->bl_size);
 
-	////выставить старший бит
-	//shift = 0;S
-	//int j = 0;
-	for (int j = 0; j < bit_count;)
-	{
-	//	shift |= *(buf + i);
-	//	shift <<= 7;
-	//	shift |= 0x8000;
-
-	//	*(buf + i) = (UINT8_T)(shift >> 8);
-	}
-
-	err = tab_ptr->write(bl->pxCurrentAddr, (void*)buf, tab_ptr->bl_size);
-
+	local_free(buf7);
 	local_free(buf);
 
 	return err;
@@ -262,7 +253,7 @@ UINT8_T WriteBlockLink(TableInfo* tab_ptr, BlockLink *bl)
 UINT8_T ReadBlockLink(TableInfo* tab_ptr, BlockLink* bl)
 {
 	UINT16_T crc;
-	UINT8_T *buf;
+	UINT8_T *buf, *buf8;
 	UINT8_T err=ERR_OK;
 
 	buf=(UINT8_T*)local_malloc(tab_ptr->bl_size);
@@ -270,35 +261,49 @@ UINT8_T ReadBlockLink(TableInfo* tab_ptr, BlockLink* bl)
 	if(buf==NULL)
 		return ERR_LOCAL_MALLOC;
 
+	buf8 = (UINT8_T*)local_malloc(tab_ptr->bl_size);
+	if (buf8 == NULL)
+	{
+		local_free(buf);
+		return ERR_LOCAL_MALLOC;
+	}
+
 	err = tab_ptr->read(bl->pxCurrentAddr, (void*)buf, tab_ptr->bl_size );
 
 	if (err != ERR_OK)
 	{
 		local_free(buf);
+		local_free(buf8);
 		return err;
 	}
 
-	//сбросить старший бит
+	if (*buf != BLOCK_LINK_START)
+	{
+		local_free(buf);
+		local_free(buf8);
+		return ERR_BL_START;
+	}
 
-	//проверка CRC если требуется
-	//if(tab_ptr->crc != NULL)
-	//{
+	SevenToEight((buf + sizeof(UINT8_T)), (buf8 + sizeof(UINT8_T)), tab_ptr->bl_size - sizeof(UINT8_T));
+
 	crc = 0xFFFF;
-	crc = tab_ptr->crc(crc, (buf + sizeof(UINT8_T)), tab_ptr->StartAddrLen + tab_ptr->TableSizeLen);
-		
-	err = memcmp((void*)(buf + sizeof(UINT8_T) + tab_ptr->StartAddrLen + tab_ptr->TableSizeLen),(void*)&crc,sizeof(UINT16_T));
+	crc = tab_ptr->crc(crc, (buf8 + sizeof(UINT8_T)), tab_ptr->StartAddrLen + tab_ptr->TableSizeLen);
+	err = memcmp((void*)(buf8 + sizeof(UINT8_T) + tab_ptr->StartAddrLen + tab_ptr->TableSizeLen),(void*)&crc,sizeof(UINT16_T));
 	if(err != 0x00)
 	{
 		local_free(buf);
+		local_free(buf8);
 		return ERR_CRC;
 	}
-	//}
 
 	//загружаем в структуру
 	bl->body.pxNextFreeBlock = 0;
-	memcpy((void*)&bl->body.pxNextFreeBlock, (void*)(buf + sizeof(UINT8_T)), tab_ptr->StartAddrLen);
+	memcpy((void*)&bl->body.pxNextFreeBlock, (void*)(buf8 + sizeof(UINT8_T)), tab_ptr->StartAddrLen);
 	bl->body.xBlockSize = 0;
-	memcpy((void*)&bl->body.xBlockSize, (void*)(buf + sizeof(UINT8_T) + tab_ptr->StartAddrLen), tab_ptr->TableSizeLen);
+	memcpy((void*)&bl->body.xBlockSize, (void*)(buf8 + sizeof(UINT8_T) + tab_ptr->StartAddrLen), tab_ptr->TableSizeLen);
+
+	local_free(buf);
+	local_free(buf8);
 
 	return ERR_OK;
 }
