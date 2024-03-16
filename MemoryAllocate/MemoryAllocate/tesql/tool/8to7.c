@@ -29,22 +29,26 @@ UINT32_T SevenToEight(UINT8_T* in, UINT8_T* out, UINT32_T len)
 
 	}
 
-	for (int i = m; i < len; i++)
+	for (UINT32_T i = m; i < len; i++)
 		out[i] = 0;
 
 	return m;
 }
 
-UINT32_T EightToSeven(UINT8_T* in, UINT8_T* out, UINT32_T len)
+UINT32_T EightToSeven(UINT8_T* in, UINT8_T* out, UINT32_T len, UINT8_T msb_bit)
 {
 	UINT32_T bit_len = len * 8;
 	UINT32_T index, index_out, bit;
 	UINT8_T	shift;
 
 	index_out = 0;
-	for (int i = 0; i < bit_len && index_out < len;)
+	for (UINT32_T i = 0; i < bit_len && index_out < len;)
 	{
-		shift = 0x80;
+		if (msb_bit == 1)
+			shift = 0x80;
+		else
+			shift = 0;
+
 		for (int j = 6; j >= 0; j--)
 		{
 			index = i / 8;

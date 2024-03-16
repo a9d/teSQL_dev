@@ -3,6 +3,7 @@
 #include "table.h"
 #include "err_code.h"
 #include "sector_hal.h"
+#include "8to7.h"
 
 /* Define the linked list structure.  This is used to link free blocks in order
 of their memory address. */
@@ -177,6 +178,7 @@ UINT8_T	memory_init(TableInfo* tab_ptr)
 			pxFirstFreeBlock.body.xBlockSize = tab_ptr->FreeBytesRemaining - tab_ptr->bl_size;
 			pxFirstFreeBlock.body.pxNextFreeBlock = tab_ptr->EndAddr;
 			err = WriteBlockLink(tab_ptr, &pxFirstFreeBlock);
+			//инициализировать память
 
 			if(err == ERR_OK)
 			{
@@ -211,7 +213,6 @@ UINT32_T table_GetFreeSize(TableInfo* tab_ptr)
 /*-----------------------------------------------------------*/
 UINT8_T WriteBlockLink(TableInfo* tab_ptr, BlockLink *bl)
 {
-	UINT16_T shift;
 	UINT16_T crc;
 	UINT8_T	*buf,*buf7;
 	UINT8_T	err = ERR_OK;
@@ -239,7 +240,7 @@ UINT8_T WriteBlockLink(TableInfo* tab_ptr, BlockLink *bl)
 	memcpy((void*)(buf + sizeof(UINT8_T) + tab_ptr->StartAddrLen + tab_ptr->TableSizeLen),(void*)&crc,sizeof(UINT16_T));
 	
 	*buf7 = BLOCK_LINK_START; //начало блок линка
-	EightToSeven((buf + sizeof(UINT8_T)), (buf7 + sizeof(UINT8_T)), (tab_ptr->bl_size - sizeof(UINT8_T)));
+	EightToSeven((buf + sizeof(UINT8_T)), (buf7 + sizeof(UINT8_T)), (tab_ptr->bl_size - sizeof(UINT8_T)),1);
 
 	err = tab_ptr->write(bl->pxCurrentAddr, (void*)buf7, tab_ptr->bl_size);
 

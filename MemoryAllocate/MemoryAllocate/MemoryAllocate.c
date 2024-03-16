@@ -42,20 +42,8 @@ UINT8_T local_read(UINT32_T addr, void *data, UINT32_T size)
 int _tmain(int argc, _TCHAR* argv[])
 {
 	TableInfo myTable;
-	UINT32_T addr, addr1, addr2, addr3, addr4, addr5, size;
+	UINT32_T addr, addr1, addr2, addr3, addr4, addr5;// , size;
 	UINT8_T err = ERR_OK;
-
-	////00010000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 10001010 00001100 00000000 00000000
-	////10001000 10000000 10000000 10000000 10000000 10000000 10000000 10000000 10000000 10100010 11000001 11000000 10000000 10000000
-	////0x88 0x80 0x80 0x80 0x80 0x80 0x80 0x80 0x80 0xA2 0xC1 0xC0   0x80 0x80
-	//UINT8_T test[12] = { 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x8A, 0x0C ,0x00,0x00};
-	//UINT8_T out[12] = { 0 };
-	//UINT8_T out1[12] = { 0 };
-	//
-	//EightToSeven(test, out, 12);
-	//SevenToEight(out, out1, 12);
-	//
-	//return 0;
 
 	MySectorInit();	//инициализация сектора
 	
@@ -86,7 +74,17 @@ int _tmain(int argc, _TCHAR* argv[])
 }
 
 
-
+////00010000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 10001010 00001100 00000000 00000000
+////10001000 10000000 10000000 10000000 10000000 10000000 10000000 10000000 10000000 10100010 11000001 11000000 10000000 10000000
+////0x88 0x80 0x80 0x80 0x80 0x80 0x80 0x80 0x80 0xA2 0xC1 0xC0   0x80 0x80
+//UINT8_T test[12] = { 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x8A, 0x0C ,0x00,0x00};
+//UINT8_T out[12] = { 0 };
+//UINT8_T out1[12] = { 0 };
+//
+//EightToSeven(test, out, 12);
+//SevenToEight(out, out1, 12);
+//
+//return 0;
 
 //#include <stdio.h>
 //#include <tchar.h>
